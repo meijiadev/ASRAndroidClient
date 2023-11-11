@@ -1,0 +1,42 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+
+        // 配置HMS Core SDK的Maven仓地址。
+        //maven { url 'https://developer.huawei.com/repo/' }
+        // 阿里云云效仓库：https://maven.aliyun.com/mvn/guide
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        // 华为开源镜像：https://mirrors.huaweicloud.com
+        maven { url 'https://repo.huaweicloud.com/repository/maven' }
+        // JitPack 远程仓库：https://jitpack.io
+        maven { url 'https://jitpack.io' }
+        jcenter()
+        // 阿里云云效仓库（Gradle 插件）：https://maven.aliyun.com/mvn/guide
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        // 配置HMS Core SDK的Maven仓地址。
+       // maven { url 'https://developer.huawei.com/repo/' }
+        // 阿里云云效仓库：https://maven.aliyun.com/mvn/guide
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        // 华为开源镜像：https://mirrors.huaweicloud.com
+        maven { url 'https://repo.huaweicloud.com/repository/maven' }
+        // JitPack 远程仓库：https://jitpack.io
+        maven { url 'https://jitpack.io' }
+        jcenter()
+        // 阿里云云效仓库（Gradle 插件）：https://maven.aliyun.com/mvn/guide
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+    }
+}
+
+rootProject.name = "ASRAndroidClient"
+include ':app'
