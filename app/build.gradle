@@ -65,5 +65,11 @@ dependencies {
     //implementation 'io.github.jeremyliao:live-event-bus-x:1.8.0'
     // 解决数据倒灌问题
     implementation 'com.kunminx.arch:unpeek-livedata:7.8.0'
+    // Lru策略
+    //implementation 'com.jakewharton:disklrucache:2.0.2'
+    // webrtc
+    implementation 'org.webrtc:google-webrtc:1.0.32006'
+     //引入socket依赖
+    implementation 'org.java-websocket:Java-WebSocket:1.4.0'
 
 }

@@ -1,5 +1,7 @@
 package com.example.asrandroidclient
 
+import android.R.attr.tag
+import android.content.Context
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
@@ -8,28 +10,46 @@ import com.example.asrandroidclient.ability.AbilityCallback
 import com.example.asrandroidclient.ability.AbilityConstant
 import com.example.asrandroidclient.ability.IFlytekAbilityManager
 import com.example.asrandroidclient.ability.abilityAuthStatus
+import com.example.asrandroidclient.file.FileUtil
 import com.example.asrandroidclient.ivw.IvwHelper
 import com.example.asrandroidclient.media.audio.RecorderCallback
 import com.example.asrandroidclient.tool.calculateVolume
-
 import com.hjq.permissions.OnPermissionCallback
 import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
-
 import com.orhanobut.logger.Logger
+import org.java_websocket.client.WebSocketClient
+import org.java_websocket.handshake.ServerHandshake
+import org.json.JSONException
+import org.json.JSONObject
+import org.webrtc.AudioTrack
+import org.webrtc.DataChannel
+import org.webrtc.IceCandidate
+import org.webrtc.MediaConstraints
+import org.webrtc.MediaStream
+import org.webrtc.PeerConnection
+import org.webrtc.PeerConnection.IceConnectionState
+import org.webrtc.PeerConnection.IceGatheringState
+import org.webrtc.PeerConnection.IceServer
+import org.webrtc.PeerConnection.SignalingState
+import org.webrtc.PeerConnectionFactory
+import org.webrtc.RtpReceiver
+import org.webrtc.audio.JavaAudioDeviceModule
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
+import java.net.URI
 import java.nio.charset.Charset
 import java.util.Locale
+
 
 class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     TextToSpeech.OnInitListener {
 
     private var ivwHelper: IvwHelper? = null
     private var keyWord: String = "救命;救命救命;服不服;打死你;单挑啊；大白大白;小迪小迪;小艺小艺"
-    private var threshold: Int = 900     //范围 0-3000
+    private var threshold: Int = 1500     //范围 0-3000
 
     private var textToSpeech: TextToSpeech? = null
 
@@ -38,6 +58,12 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         Logger.i("应用启动")
+        val size = FileUtil.getDirectorySize(MyApp.CONTEXT.externalCacheDir?.absolutePath)
+        val mSize = size / 1024 / 1024
+        Logger.i("当前应用目录下缓存占用内存：${mSize} M")
+        if (mSize > 800) {
+            FileUtil.deleteDirectory(MyApp.CONTEXT.externalCacheDir?.absolutePath ?: " ")
+        }
         textToSpeech = TextToSpeech(MyApp.CONTEXT, this)
         XXPermissions.with(this)
             // .permission(Permission.MANAGE_EXTERNAL_STORAGE)
@@ -222,6 +248,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         ivwHelper = null
         super.finish()
     }
+
 
 
 }

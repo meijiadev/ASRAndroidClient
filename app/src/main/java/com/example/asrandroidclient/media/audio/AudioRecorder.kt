@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.example.asrandroidclient.MyApp
 import com.example.asrandroidclient.tool.mainThread
+import com.example.asrandroidclient.tool.stampToDate
 import com.orhanobut.logger.Logger
 import java.io.File
 import java.io.FileNotFoundException
@@ -37,6 +38,14 @@ class AudioRecorder private constructor() : Recorder {
 
     private val isRecording = AtomicBoolean(false)
     private val isPaused = AtomicBoolean(false)
+
+    // 当前录音文件的名称，开始录音时的时间戳
+    //private var cursTime: String? = null
+    // 开始录音的时间戳
+    private var curTime: Long = 0
+
+    // 当前录音的文件路径
+    private var curAudioFilePath: String? = null
 
     companion object {
 
@@ -97,10 +106,7 @@ class AudioRecorder private constructor() : Recorder {
         }
         isRecording.set(true)
         isPaused.set(false)
-        recordFile = File(
-            MyApp.CONTEXT.externalCacheDir?.absolutePath ?: "",
-            "${System.currentTimeMillis()}.pcm"
-        )
+        createAudioFile()
         recordingThread = Thread(RecordThread(), "RecordThread")
         try {
             recordingThread?.start()
@@ -110,6 +116,20 @@ class AudioRecorder private constructor() : Recorder {
         } catch (e: Exception) {
             throw AudioRecordException("录音失败")
         }
+    }
+
+    /**
+     * 创建音频文件
+     */
+    private fun createAudioFile() {
+        curTime = System.currentTimeMillis()
+        val cursTime = curTime.stampToDate()
+        recordFile = File(
+            MyApp.CONTEXT.externalCacheDir?.absolutePath ?: "",
+            "$cursTime.pcm"
+        )
+        curAudioFilePath = recordFile?.absolutePath
+        Logger.i("当前录音的绝对路径：$curAudioFilePath")
     }
 
 
@@ -167,7 +187,7 @@ class AudioRecorder private constructor() : Recorder {
     inner class RecordThread : Runnable {
 
         override fun run() {
-            val fos: FileOutputStream? = try {
+            var fos: FileOutputStream? = try {
                 FileOutputStream(recordFile)
             } catch (e: FileNotFoundException) {
                 Log.e(TAG, "", e)
@@ -176,6 +196,17 @@ class AudioRecorder private constructor() : Recorder {
             val scoringBufferMaxSize = bufferSize
             val audioData = ByteArray(scoringBufferMaxSize)
             while (isRecording()) {
+                // 每超过十分钟就重新新建一个文件
+                val time = System.currentTimeMillis() - curTime
+                if (time > 10 * 1000 * 60) {
+                    createAudioFile()
+                    fos = try {
+                        FileOutputStream(recordFile)
+                    } catch (e: FileNotFoundException) {
+                        Log.e(TAG, "", e)
+                        null
+                    }
+                }
                 val localPaused = isPaused()
                 if (localPaused) {
                     continue
