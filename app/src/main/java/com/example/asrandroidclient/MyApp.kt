@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.multidex.MultiDex
 import com.example.asrandroidclient.util.SpManager
 import com.example.asrandroidclient.viewmodel.MainViewModel
+import com.example.asrandroidclient.webrtc.SocketEventViewModel
 import com.orhanobut.logger.AndroidLogAdapter
 import com.orhanobut.logger.Logger
 
@@ -17,6 +18,7 @@ class MyApp : Application(), ViewModelStoreOwner {
     companion object {
         lateinit var CONTEXT: Context
         lateinit var mainViewModel: MainViewModel
+        lateinit var socketEventViewModel: SocketEventViewModel
     }
 
     override fun attachBaseContext(base: Context?) {
@@ -31,6 +33,7 @@ class MyApp : Application(), ViewModelStoreOwner {
         SpManager.init(this)
         mAppViewModelStore = ViewModelStore()
         mainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
+        socketEventViewModel = ViewModelProvider(this)[SocketEventViewModel::class.java]
     }
 
     override fun getViewModelStore(): ViewModelStore {

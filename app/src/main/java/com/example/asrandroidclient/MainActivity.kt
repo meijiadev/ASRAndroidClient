@@ -1,45 +1,27 @@
 package com.example.asrandroidclient
 
-import android.R.attr.tag
-import android.content.Context
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.example.asrandroidclient.ability.AbilityCallback
 import com.example.asrandroidclient.ability.AbilityConstant
 import com.example.asrandroidclient.ability.IFlytekAbilityManager
 import com.example.asrandroidclient.ability.abilityAuthStatus
+import com.example.asrandroidclient.data.SpeechResult
 import com.example.asrandroidclient.file.FileUtil
 import com.example.asrandroidclient.ivw.IvwHelper
 import com.example.asrandroidclient.media.audio.RecorderCallback
 import com.example.asrandroidclient.tool.calculateVolume
+import com.google.gson.Gson
 import com.hjq.permissions.OnPermissionCallback
 import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
 import com.orhanobut.logger.Logger
-import org.java_websocket.client.WebSocketClient
-import org.java_websocket.handshake.ServerHandshake
-import org.json.JSONException
-import org.json.JSONObject
-import org.webrtc.AudioTrack
-import org.webrtc.DataChannel
-import org.webrtc.IceCandidate
-import org.webrtc.MediaConstraints
-import org.webrtc.MediaStream
-import org.webrtc.PeerConnection
-import org.webrtc.PeerConnection.IceConnectionState
-import org.webrtc.PeerConnection.IceGatheringState
-import org.webrtc.PeerConnection.IceServer
-import org.webrtc.PeerConnection.SignalingState
-import org.webrtc.PeerConnectionFactory
-import org.webrtc.RtpReceiver
-import org.webrtc.audio.JavaAudioDeviceModule
+import com.ys.rkapi.MyManager
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
-import java.net.URI
 import java.nio.charset.Charset
 import java.util.Locale
 
@@ -48,10 +30,14 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     TextToSpeech.OnInitListener {
 
     private var ivwHelper: IvwHelper? = null
-    private var keyWord: String = "救命;救命救命;服不服;打死你;单挑啊；大白大白;小迪小迪;小艺小艺"
-    private var threshold: Int = 1500     //范围 0-3000
+    private var keyWord: String =
+        "救命救命;服不服;打死你;单挑啊；大白大白;小迪小迪;小艺小艺;屌毛"
+    private var threshold: Int = 800     //范围 0-3000
 
     private var textToSpeech: TextToSpeech? = null
+
+    // 分贝
+    private var calculateVolume: Int = 0
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,8 +72,40 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             })
         initIvw()
         initViewModel()
+        initYsAndroidApi()
+
     }
 
+
+    private fun initSocket(){
+        MyApp.socketEventViewModel.initSocket()
+    }
+
+    /**
+     * 初始化安卓开发板的api
+     */
+    private fun initYsAndroidApi() {
+        val myManager = MyManager.getInstance(this)
+        myManager.bindAIDLService(this)
+        myManager.setConnectClickInterface {
+            Logger.e(
+                "当前sdk的版本号：${myManager.firmwareVersion} \n " +
+                        "当前设备的型号：${myManager.androidModle} \n" +
+                        "设备的系统版本：${myManager.androidVersion} \n " +
+                        "当前设备的内存容量：${myManager.runningMemory} \n" +
+                        "获取设备的sn码：${myManager.sn}"
+            )
+            if (myManager.firmwareVersion.toInt() < 4) {
+                Logger.e("当前SDK的版本号小于4.0")
+            }
+            // 开机自启动
+            myManager.selfStart("com.example.asrandroidclient")
+            // 打开网络adb连接
+            myManager.setNetworkAdb(true)
+            // 设置守护进程 0:30s  1：60s   2:180s
+           // myManager.daemon("com.sjb.securitydoormanager", 0)
+        }
+    }
 
     private fun initViewModel() {
         MyApp.mainViewModel.aiRegisterStatus.observe(this) {
@@ -155,7 +173,9 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         super.onStop()
     }
 
-
+    /**
+     * 生成
+     */
     private fun createKeywordFile(): String {
         val file = File(MyApp.CONTEXT.externalCacheDir, "keyword.txt")
         if (file.exists()) {
@@ -176,6 +196,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 //            val bufferedWriter = BufferedWriter(FileWriter(file))
             bufferedWriter.write(keyword)
             bufferedWriter.close()
+            Logger.i("关键字：$keyword")
         }.onFailure {
             Logger.e("唤醒词写入失败${it.message}")
         }
@@ -194,7 +215,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         }
 
         override fun onRecordProgress(data: ByteArray, sampleSize: Int, volume: Int) {
-            val calculateVolume = data.calculateVolume()
+            calculateVolume = data.calculateVolume()
             Logger.d("当前分贝:$calculateVolume")
             if (calculateVolume > 60) {
                 Logger.i("禁止喧哗吵闹")
@@ -210,12 +231,28 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     override fun onAbilityBegin() {
         Logger.i("语音唤醒正在开始中...")
+        postDelayed({
+            textToSpeech?.speak("系统已启动", TextToSpeech.QUEUE_ADD, null, null)
+        },1000)
 
     }
 
     override fun onAbilityResult(result: String) {
-        Logger.i("触发唤醒关键字：$result")
-        textToSpeech?.speak("禁止打架斗殴", TextToSpeech.QUEUE_ADD, null, null)
+        Logger.i("$result，当前声音分贝：$calculateVolume")
+        val rs = result.replace("func_wake_up:", "")
+        runCatching {
+            val speechResult = Gson().fromJson(rs, SpeechResult::class.java)
+            val rtl = speechResult.rlt[0]
+            Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}")
+            if (rtl.ncm_keyword > 1000) {
+                if (rs.contains("救命救命")) {
+                    textToSpeech?.speak("请勿打架斗殴", TextToSpeech.QUEUE_ADD, null, null)
+                }
+            }
+        }.onFailure {
+            Logger.e("error:${it.message}")
+            ivwHelper?.destroy()
+        }
 
     }
 
@@ -248,7 +285,6 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         ivwHelper = null
         super.finish()
     }
-
 
 
 }

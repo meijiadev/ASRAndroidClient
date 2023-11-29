@@ -17,6 +17,13 @@ pluginManagement {
         // 阿里云云效仓库（Gradle 插件）：https://maven.aliyun.com/mvn/guide
         maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
     }
+
+    plugins {
+        id 'com.android.application' version '7.1.0-alpha11'
+        id 'com.android.library' version '7.1.0-alpha11'
+        id 'org.jetbrains.kotlin.android' version '1.5.20'
+    }
+
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
