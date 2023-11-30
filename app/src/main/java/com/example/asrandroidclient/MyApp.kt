@@ -1,19 +1,16 @@
 package com.example.asrandroidclient
 
-import android.app.Application
 import android.content.Context
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
 import androidx.multidex.MultiDex
 import com.example.asrandroidclient.util.SpManager
 import com.example.asrandroidclient.viewmodel.MainViewModel
 import com.example.asrandroidclient.webrtc.SocketEventViewModel
 import com.orhanobut.logger.AndroidLogAdapter
 import com.orhanobut.logger.Logger
+import com.sjb.base.base.BaseApplication
 
-class MyApp : Application(), ViewModelStoreOwner {
-    private lateinit var mAppViewModelStore: ViewModelStore
+class MyApp : BaseApplication() {
+
 
     companion object {
         lateinit var CONTEXT: Context
@@ -31,12 +28,8 @@ class MyApp : Application(), ViewModelStoreOwner {
         CONTEXT = this
         Logger.addLogAdapter(AndroidLogAdapter())
         SpManager.init(this)
-        mAppViewModelStore = ViewModelStore()
-        mainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-        socketEventViewModel = ViewModelProvider(this)[SocketEventViewModel::class.java]
+        mainViewModel = getApplicationViewModel(MainViewModel::class.java)
+        socketEventViewModel = getApplicationViewModel(SocketEventViewModel::class.java)
     }
 
-    override fun getViewModelStore(): ViewModelStore {
-        return mAppViewModelStore
-    }
 }

@@ -39,6 +39,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     // 分贝
     private var calculateVolume: Int = 0
 
+    private var sn: String? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,8 +79,10 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
 
-    private fun initSocket(){
-        MyApp.socketEventViewModel.initSocket()
+    private fun initSocket() {
+        sn?.let {
+            MyApp.socketEventViewModel.initSocket(it)
+        }
     }
 
     /**
@@ -88,6 +92,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         val myManager = MyManager.getInstance(this)
         myManager.bindAIDLService(this)
         myManager.setConnectClickInterface {
+            sn = myManager.sn
             Logger.e(
                 "当前sdk的版本号：${myManager.firmwareVersion} \n " +
                         "当前设备的型号：${myManager.androidModle} \n" +
@@ -103,7 +108,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             // 打开网络adb连接
             myManager.setNetworkAdb(true)
             // 设置守护进程 0:30s  1：60s   2:180s
-           // myManager.daemon("com.sjb.securitydoormanager", 0)
+            // myManager.daemon("com.sjb.securitydoormanager", 0)
+            initSocket()
         }
     }
 
@@ -233,7 +239,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         Logger.i("语音唤醒正在开始中...")
         postDelayed({
             textToSpeech?.speak("系统已启动", TextToSpeech.QUEUE_ADD, null, null)
-        },1000)
+        }, 1000)
 
     }
 

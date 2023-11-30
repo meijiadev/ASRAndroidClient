@@ -41,7 +41,7 @@ class WebRtcManager(context: Context) : SdpObserver {
     private var networkMonitor: NetworkMonitor? = null
     private var audioManager: AudioManager? = null
 
-    private var context:Context
+    private var context: Context
 
     init {
         executor = Executors.newSingleThreadExecutor()
@@ -49,10 +49,13 @@ class WebRtcManager(context: Context) : SdpObserver {
         mRootEglBase = EglBase.create()
         audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager?
         networkMonitor = NetworkMonitor.getInstance()
-        this.context=context
+        this.context = context
     }
 
 
+    /**
+     * 生成factory
+     */
     private fun createConnectFactory(context: Context): PeerConnectionFactory? {
         Logger.i("初始化webrtc")
         PeerConnectionFactory.initialize(
@@ -88,10 +91,10 @@ class WebRtcManager(context: Context) : SdpObserver {
     }
 
     /**
-     * 创建连接
+     * 创建peer连接
      */
     fun createPeerConnect() {
-        if (factory==null){
+        if (factory == null) {
             createConnectFactory(context)
         }
         if (peerConnection == null) {
@@ -165,7 +168,7 @@ class WebRtcManager(context: Context) : SdpObserver {
      * 将本地媒体流添加到peer
      */
     fun addLocalStream() {
-        audioManager?.mode=AudioManager.MODE_IN_COMMUNICATION
+        audioManager?.mode = AudioManager.MODE_IN_COMMUNICATION
         peerConnection?.addStream(localStream)
     }
 

@@ -1,0 +1,78 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.sjb.base'
+    compileSdk 32
+
+    defaultConfig {
+       // applicationId "com.sjb.base"
+        minSdk 23
+        targetSdk 32
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.7.0'
+    //noinspection GradleCompatible
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'com.google.android.material:material:1.5.0'
+
+    testImplementation 'junit:junit:4.13.2'
+    //noinspection GradleCompatible
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+
+    //ui适配
+    // api 'com.github.JessYanCoding:AndroidAutoSize:v1.2.1'
+    api 'androidx.percentlayout:percentlayout:1.0.0'
+    // 日志框架
+    api 'com.orhanobut:logger:2.2.0'
+    // viewModel
+    api "androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.1"
+    //api "androidx.lifecycle:lifecycle-runtime-ktx:2.4.0"
+    api 'androidx.lifecycle:lifecycle-livedata-ktx:2.4.1'
+    api 'androidx.recyclerview:recyclerview:1.2.1'
+// 基础依赖包，必须要依赖
+    api 'com.geyifeng.immersionbar:immersionbar:3.2.2'
+    // kotlin扩展（可选）
+    api 'com.geyifeng.immersionbar:immersionbar-ktx:3.2.2'
+
+    api 'com.squareup.retrofit2:retrofit:2.9.0'
+    api 'com.squareup.retrofit2:converter-gson:2.9.0'
+    api 'com.squareup.okhttp3:logging-interceptor:3.8.1'
+
+    //Cookies自动持久化
+    api 'com.github.franmontiel:PersistentCookieJar:v1.0.1'
+    //动态替换BaseUrl库 使用可参考 https://github.com/JessYanCoding/RetrofitUrlManager
+    //implementation 'me.jessyan:retrofit-url-manager:1.4.0'
+
+    api 'com.github.li-xiaojun:XPopup:2.9.16'
+
+    // 吐司框架：https://github.com/getActivity/ToastUtils
+    api 'com.github.getActivity:ToastUtils:11.2'
+}

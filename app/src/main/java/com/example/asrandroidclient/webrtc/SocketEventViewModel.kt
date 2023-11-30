@@ -13,7 +13,7 @@ import io.socket.client.Socket
 import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 
-class SocketEventViewModel : ViewModel() ,HandlerAction{
+class SocketEventViewModel : ViewModel(), HandlerAction {
     companion object {
         const val TAG = "SocketEventViewModel"
     }
@@ -109,6 +109,7 @@ class SocketEventViewModel : ViewModel() ,HandlerAction{
 //                    sendAnswer(sdp)
                     webRtcManager?.createAnswer()
                 }
+
                 "answer" -> {
                     // 设置 remote sdp
                     Logger.i("receive answer:${message.data}")
@@ -117,9 +118,11 @@ class SocketEventViewModel : ViewModel() ,HandlerAction{
                     //  发送answer 并设置remote sdp
                     webRtcManager?.setRemoteDescription(sdp)
                 }
+
                 "hangUp" -> {
                     webRtcManager?.release()
                 }
+
                 "icecandidate" -> {
                     Logger.d("ice:${message.data}")
                     val ice = Gson().fromJson(message.data.toString(), IceCandidate::class.java)
@@ -146,7 +149,7 @@ class SocketEventViewModel : ViewModel() ,HandlerAction{
             Logger.i("来电了：from:${it[0]},to:${it[1]}")
             postDelayed({
                 sendCalled()
-            },100)
+            }, 100)
         }
 
         // 只有接听方才需要处理此业务 别人已经确定接听
