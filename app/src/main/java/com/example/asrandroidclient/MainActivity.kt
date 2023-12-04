@@ -1,7 +1,10 @@
 package com.example.asrandroidclient
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
+import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.asrandroidclient.ability.AbilityCallback
 import com.example.asrandroidclient.ability.AbilityConstant
@@ -41,6 +44,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     private var sn: String? = null
 
+    private val msgTV: TextView by lazy { findViewById(R.id.message_tv) }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,7 +84,13 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
 
+    fun onCall(v: View) {
+        MyApp.socketEventViewModel.call("SN012345678902", "SN012345678901")
+    }
+
+
     private fun initSocket() {
+        Logger.i("初始化initSocket")
         sn?.let {
             MyApp.socketEventViewModel.initSocket(it)
         }
@@ -93,7 +104,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         myManager.bindAIDLService(this)
         myManager.setConnectClickInterface {
             sn = myManager.sn
-            Logger.e(
+            Logger.i(
                 "当前sdk的版本号：${myManager.firmwareVersion} \n " +
                         "当前设备的型号：${myManager.androidModle} \n" +
                         "设备的系统版本：${myManager.androidVersion} \n " +
@@ -101,7 +112,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                         "获取设备的sn码：${myManager.sn}"
             )
             if (myManager.firmwareVersion.toInt() < 4) {
-                Logger.e("当前SDK的版本号小于4.0")
+                Logger.i("当前SDK的版本号小于4.0")
             }
             // 开机自启动
             myManager.selfStart("com.example.asrandroidclient")
@@ -113,6 +124,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun initViewModel() {
         MyApp.mainViewModel.aiRegisterStatus.observe(this) {
             it?.let {
@@ -121,6 +133,11 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     startRecord()
                 }
             }
+        }
+        MyApp.socketEventViewModel.msgEvent.observe(this) {
+            val text=msgTV.text.toString()
+            msgTV.text=text+"\n"+it
+
         }
     }
 
@@ -150,7 +167,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
      * 开始录音
      */
     private fun startRecord() {
-        val filePath = createKeywordFile()
+        val filePath = createKeywordFile(keyWord)
         val keywordSize = keyWord.trim().split(";").count()
         ivwHelper?.startAudioRecord(filePath, keywordSize, threshold)
         Logger.i("启动唤醒程序，正在录音中...")
@@ -182,7 +199,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     /**
      * 生成
      */
-    private fun createKeywordFile(): String {
+    private fun createKeywordFile(key:String): String {
         val file = File(MyApp.CONTEXT.externalCacheDir, "keyword.txt")
         if (file.exists()) {
             file.delete()
@@ -222,7 +239,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
         override fun onRecordProgress(data: ByteArray, sampleSize: Int, volume: Int) {
             calculateVolume = data.calculateVolume()
-            Logger.d("当前分贝:$calculateVolume")
+            //  Logger.d("当前分贝:$calculateVolume")
             if (calculateVolume > 60) {
                 Logger.i("禁止喧哗吵闹")
                 textToSpeech?.speak("禁止喧哗吵闹", TextToSpeech.QUEUE_ADD, null, null)
@@ -238,7 +255,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     override fun onAbilityBegin() {
         Logger.i("语音唤醒正在开始中...")
         postDelayed({
-            textToSpeech?.speak("系统已启动", TextToSpeech.QUEUE_ADD, null, null)
+            //  textToSpeech?.speak("系统已启动", TextToSpeech.QUEUE_ADD, null, null)
         }, 1000)
 
     }

@@ -215,7 +215,7 @@ class IvwHelper(
                     Logger.e("read error code => $ret")
                     endAiHandle()
                 } else {
-                    Logger.d("read success code => $ret")
+//                    Logger.d("read success code => $ret")
                 }
             }
         }
@@ -241,7 +241,7 @@ class IvwHelper(
     }
 
     override fun onRecordProgress(data: ByteArray, sampleSize: Int, volume: Int) {
-        Logger.d("onRecordProgress===>$sampleSize=$volume")
+//        Logger.d("onRecordProgress===>$sampleSize=$volume")
         recordCallback?.onRecordProgress(data, sampleSize, volume)
         writeData(data)
     }
