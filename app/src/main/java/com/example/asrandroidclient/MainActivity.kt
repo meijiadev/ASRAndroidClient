@@ -13,14 +13,25 @@ import com.example.asrandroidclient.ability.abilityAuthStatus
 import com.example.asrandroidclient.data.SpeechResult
 import com.example.asrandroidclient.file.FileUtil
 import com.example.asrandroidclient.ivw.IvwHelper
+import com.example.asrandroidclient.media.audio.AudioRecorder
 import com.example.asrandroidclient.media.audio.RecorderCallback
+import com.example.asrandroidclient.room.AppDataBase
+import com.example.asrandroidclient.room.bean.KeywordBean
+import com.example.asrandroidclient.tool.ByteArrayQueue
+import com.example.asrandroidclient.tool.PCMEncoderAAC
 import com.example.asrandroidclient.tool.calculateVolume
+import com.example.asrandroidclient.tool.stampToDate
 import com.google.gson.Gson
 import com.hjq.permissions.OnPermissionCallback
 import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
 import com.orhanobut.logger.Logger
 import com.ys.rkapi.MyManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
@@ -34,8 +45,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     private var ivwHelper: IvwHelper? = null
     private var keyWord: String =
-        "救命救命;服不服;打死你;单挑啊；大白大白;小迪小迪;小艺小艺;屌毛"
-    private var threshold: Int = 800     //范围 0-3000
+        "救命救命"
+    private var threshold: Int = 900     //范围 0-3000
 
     private var textToSpeech: TextToSpeech? = null
 
@@ -46,6 +57,14 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     private val msgTV: TextView by lazy { findViewById(R.id.message_tv) }
 
+    private var speechMsg: String? = null
+    private var speechMsgTimes: Int = 1
+
+    /**
+     * 是否是语音引擎重启
+     */
+    private var isRestart = false
+    private var pcmEncoderAAC: PCMEncoderAAC? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +75,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         Logger.i("当前应用目录下缓存占用内存：${mSize} M")
         if (mSize > 800) {
             FileUtil.deleteDirectory(MyApp.CONTEXT.externalCacheDir?.absolutePath ?: " ")
+
         }
         textToSpeech = TextToSpeech(MyApp.CONTEXT, this)
         XXPermissions.with(this)
@@ -84,8 +104,40 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
 
+    /**
+     * 获取语音播报的文本信息
+     */
+    private fun initVoice() {
+        MainScope().launch(Dispatchers.IO) {
+            val voiceDatas = AppDataBase.getInstance().voiceDao().getAllVoice()
+            if (voiceDatas != null) {
+                for (voice in voiceDatas) {
+                    if (voice.defaultFlag) {
+                        speechMsg = voice.text
+                        speechMsgTimes = voice.times
+                        Logger.i("播报的语音：$speechMsg")
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取数据库中的keywords表中的数据
+     */
+    private suspend fun getKeywords(): MutableList<KeywordBean>? {
+        return withContext(Dispatchers.IO) {
+            AppDataBase.getInstance().keyWordDao().getAllKey()
+        }
+    }
+
+
     fun onCall(v: View) {
-        MyApp.socketEventViewModel.call("SN012345678902", "SN012345678901")
+        MainScope().launch(Dispatchers.IO) {
+            //val waring = System.currentTimeMillis()
+
+        }
+
     }
 
 
@@ -130,15 +182,59 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             it?.let {
                 if (it) {
                     Logger.i("授权信息：${AbilityConstant.IVW_ID.abilityAuthStatus()}")
-                    startRecord()
+                    MainScope().launch {
+                        if (!isRestart) {
+                            textToSpeech?.speak(
+                                "设备正在自检中",
+                                TextToSpeech.QUEUE_ADD,
+                                null,
+                                null
+                            )
+                            delay(5000)
+                            startRecord()
+                        } else {
+                            startRecord()
+                        }
+                    }
                 }
             }
         }
+
         MyApp.socketEventViewModel.msgEvent.observe(this) {
-            val text=msgTV.text.toString()
-            msgTV.text=text+"\n"+it
+            val text = msgTV.text.toString()
+            msgTV.text = text + "\n" + it
 
         }
+
+        MyApp.socketEventViewModel.keywordUpdateEvent.observe(this) {
+            it?.let {
+                when (it) {
+                    0, 1, 2 -> {
+                        Logger.i("keyword 增删改 需要重启科大讯飞引擎")
+                        isRestart
+                        restartIvw()
+                    }
+
+                    3 -> {
+
+                    }
+                }
+            }
+        }
+        MyApp.socketEventViewModel.voiceUpdateEvent.observe(this) {
+            it?.let {
+                Logger.i("更新voice信息")
+                initVoice()
+                when (it) {
+                    0, 1, 2 -> {
+                    }
+
+                    3 -> {}
+                }
+            }
+        }
+
+
     }
 
     private fun initIvw() {
@@ -167,21 +263,25 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
      * 开始录音
      */
     private fun startRecord() {
-        val filePath = createKeywordFile(keyWord)
-        val keywordSize = keyWord.trim().split(";").count()
-        ivwHelper?.startAudioRecord(filePath, keywordSize, threshold)
-        Logger.i("启动唤醒程序，正在录音中...")
-    }
+        MainScope().launch(Dispatchers.IO) {
+            var keyStr = ""
+            val keywords = getKeywords()
+            if (keywords != null) {
+                for (key in keywords) {
+                    keyStr = keyStr + key.keyword + ";"
+                }
+                Logger.i("将数据库中的关键字写入到讯飞配置文件中：$keyStr")
+                keyWord = keyStr
+                val filePath = createKeywordFile(keyWord)
+                val keywordSize = keyWord.trim().split(";").count()
+                withContext(Dispatchers.Main) {
+                    ivwHelper?.startAudioRecord(filePath, keywordSize, threshold)
+                    Logger.i("重新启动录音，正在录音中...")
+                }
+            }
+        }
 
-//    /**
-//     * 停止录音
-//     */
-//    private fun stopRecord() {
-//        Logger.i("暂停唤醒程序，停止录音中")
-//        ivwHelper?.stopAudioRecord()
-//        ivwHelper = null
-//        Logger.i("暂停唤醒程序，停止录音中")
-//    }
+    }
 
 
     override fun onPause() {
@@ -189,6 +289,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         textToSpeech?.shutdown()
         super.onPause()
     }
+
 
     override fun onStop() {
         Logger.i("退出app")
@@ -199,7 +300,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     /**
      * 生成
      */
-    private fun createKeywordFile(key:String): String {
+    private fun createKeywordFile(key: String): String {
         val file = File(MyApp.CONTEXT.externalCacheDir, "keyword.txt")
         if (file.exists()) {
             file.delete()
@@ -209,7 +310,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             binFile.delete()
         }
         kotlin.runCatching {
-            val keyword = keyWord
+            val keyword = key
                 .replace("；", ";")
                 .replace(";", ";\n")
                 .replace("\r\n", "\n")
@@ -238,11 +339,17 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         }
 
         override fun onRecordProgress(data: ByteArray, sampleSize: Int, volume: Int) {
+            writeByteToQueue(data)
             calculateVolume = data.calculateVolume()
             //  Logger.d("当前分贝:$calculateVolume")
             if (calculateVolume > 60) {
                 Logger.i("禁止喧哗吵闹")
-                textToSpeech?.speak("禁止喧哗吵闹", TextToSpeech.QUEUE_ADD, null, null)
+                textToSpeech?.speak(
+                    "禁止喧哗吵闹",
+                    TextToSpeech.QUEUE_ADD,
+                    null,
+                    null
+                )
             }
 
         }
@@ -254,9 +361,10 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     override fun onAbilityBegin() {
         Logger.i("语音唤醒正在开始中...")
-        postDelayed({
-            //  textToSpeech?.speak("系统已启动", TextToSpeech.QUEUE_ADD, null, null)
-        }, 1000)
+        if (!isRestart)
+            postDelayed({
+                textToSpeech?.speak("系统已启动", TextToSpeech.QUEUE_ADD, null, null)
+            }, 1000)
 
     }
 
@@ -264,12 +372,42 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         Logger.i("$result，当前声音分贝：$calculateVolume")
         val rs = result.replace("func_wake_up:", "")
         runCatching {
+
             val speechResult = Gson().fromJson(rs, SpeechResult::class.java)
             val rtl = speechResult.rlt[0]
-            Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}")
-            if (rtl.ncm_keyword > 1000) {
-                if (rs.contains("救命救命")) {
-                    textToSpeech?.speak("请勿打架斗殴", TextToSpeech.QUEUE_ADD, null, null)
+            MainScope().launch(Dispatchers.IO) {
+                val keywordBean =
+                    AppDataBase.getInstance().keyWordDao().findByKeyword(rtl.keyword)
+                val credibility = keywordBean?.credibility ?: 900
+                val enable = keywordBean?.enabled ?: true
+                Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled}")
+                val alarmFile = writeBytesToFile()
+                if (rtl.ncm_keyword > credibility && enable) {
+                    //if (rs.contains("救命救命")) {
+                    for (i in 0 until speechMsgTimes) {
+                        textToSpeech?.speak(
+                            (speechMsg ?: "请勿打架斗殴"),
+                            TextToSpeech.QUEUE_ADD,
+                            null,
+                            null
+                        )
+                    }
+                    if (keywordBean != null) {
+                        val key = rtl.keyword
+                        val keyId = keywordBean.keywordId.toLong()
+                        val ncm = rtl.ncm_keyword
+                        val duration = (rtl.iduration * 10).toString()
+                        if (alarmFile != null)
+                            MyApp.socketEventViewModel.getUploadFileUrl(
+                                key,
+                                keyId,
+                                ncm,
+                                duration,
+                                alarmFile
+                            )
+                        //MyApp.socketEventViewModel.uploadWarnMsg(key, keyId, ncm, duration)
+                    }
+                    // }
                 }
             }
         }.onFailure {
@@ -307,6 +445,58 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         ivwHelper?.destroy()
         ivwHelper = null
         super.finish()
+    }
+
+
+    private var byteArrayQueue = ByteArrayQueue()
+
+    // 30秒音频所占的格式
+    private var maxQueueSize = AudioRecorder.SAMPLE_RATE_IN_HZ * AudioRecorder.AUDIO_FORMAT * 30
+
+
+    private fun restartIvw() {
+        MainScope().launch {
+            ivwHelper?.destroy()
+            ivwHelper = null
+            delay(1000)
+            Logger.i("重新初始化科大讯飞引擎")
+            IFlytekAbilityManager.getInstance().initializeSdk(MyApp.CONTEXT)
+            initIvw()
+            Logger.i("重新初始化科大讯飞引擎")
+        }
+
+    }
+
+    /**
+     * 把字节数组写入到字节数组队列中
+     */
+    private fun writeByteToQueue(data: ByteArray) {
+        // val time = System.currentTimeMillis()
+        byteArrayQueue.append(data)
+        if (byteArrayQueue.size > maxQueueSize) {
+            byteArrayQueue.pop(byteArrayQueue.size - maxQueueSize)
+        }
+        // val endTime = System.currentTimeMillis()
+        //  Logger.i("实现该操作耗费：${endTime - time}")
+    }
+
+
+    /**
+     * 将缓冲区中的音频写入到字节数组中
+     */
+    private fun writeBytesToFile(): File? {
+        kotlin.runCatching {
+            val data = byteArrayQueue.popAll()
+            val pcmName = (System.currentTimeMillis()).stampToDate() + ".pcm"
+            val file = File(FileUtil.getAlarmCacheDir(), pcmName)
+            val outputStream = FileOutputStream(file)
+            outputStream.write(data)
+            // 关闭输出流
+            outputStream.close()
+        }.onFailure {
+            Logger.e("报警音频写入失败：${it.message}")
+        }
+        return null
     }
 
 

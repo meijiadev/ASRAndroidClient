@@ -8,6 +8,8 @@ import android.media.MediaRecorder
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.example.asrandroidclient.MyApp
+import com.example.asrandroidclient.tool.ByteArrayQueue
+import com.example.asrandroidclient.tool.PCMEncoderAAC
 import com.example.asrandroidclient.tool.mainThread
 import com.example.asrandroidclient.tool.stampToDate
 import com.orhanobut.logger.Logger
@@ -46,17 +48,23 @@ class AudioRecorder private constructor() : Recorder {
 
     // 当前录音的文件路径
     private var curAudioFilePath: String? = null
+    private var byteArrayQueue = ByteArrayQueue()
+
+    // 30秒音频所占的格式
+    private var maxQueueSize = SAMPLE_RATE_IN_HZ * AUDIO_FORMAT * 30
+
 
     companion object {
 
-        private const val SAMPLE_RATE_IN_HZ = 16000
-        private const val AUDIO_SOURCE = MediaRecorder.AudioSource.MIC
-        private const val CHANNEL_CONFIGURATION = AudioFormat.CHANNEL_IN_MONO
-        private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
+        const val SAMPLE_RATE_IN_HZ = 16000
+        const val AUDIO_SOURCE = MediaRecorder.AudioSource.MIC
+        const val CHANNEL_CONFIGURATION = AudioFormat.CHANNEL_IN_MONO
+        const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
 
         @JvmStatic
         val instance by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { AudioRecorder() }
     }
+
 
     @SuppressLint("MissingPermission")
     fun init() {
@@ -77,6 +85,7 @@ class AudioRecorder private constructor() : Recorder {
         if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
             throw AudioRecordException("初始化录音失败")
         }
+
     }
 
     override fun setRecorderCallback(callback: RecorderCallback?) {
@@ -106,7 +115,7 @@ class AudioRecorder private constructor() : Recorder {
         }
         isRecording.set(true)
         isPaused.set(false)
-        createAudioFile()
+        //createAudioFile()
         recordingThread = Thread(RecordThread(), "RecordThread")
         try {
             recordingThread?.start()
@@ -187,26 +196,26 @@ class AudioRecorder private constructor() : Recorder {
     inner class RecordThread : Runnable {
 
         override fun run() {
-            var fos: FileOutputStream? = try {
-                FileOutputStream(recordFile)
-            } catch (e: FileNotFoundException) {
-                Log.e(TAG, "", e)
-                null
-            }
+//            var fos: FileOutputStream? = try {
+//                FileOutputStream(recordFile)
+//            } catch (e: FileNotFoundException) {
+//                Log.e(TAG, "", e)
+//                null
+//            }
             val scoringBufferMaxSize = bufferSize
             val audioData = ByteArray(scoringBufferMaxSize)
             while (isRecording()) {
-                // 每超过十分钟就重新新建一个文件
-                val time = System.currentTimeMillis() - curTime
-                if (time > 10 * 1000 * 60) {
-                    createAudioFile()
-                    fos = try {
-                        FileOutputStream(recordFile)
-                    } catch (e: FileNotFoundException) {
-                        Log.e(TAG, "", e)
-                        null
-                    }
-                }
+//                // 每超过十分钟就重新新建一个文件
+//                val time = System.currentTimeMillis() - curTime
+//                if (time > 10 * 1000 * 60) {
+//                    createAudioFile()
+//                    fos = try {
+//                        FileOutputStream(recordFile)
+//                    } catch (e: FileNotFoundException) {
+//                        Log.e(TAG, "", e)
+//                        null
+//                    }
+//                }
                 val localPaused = isPaused()
                 if (localPaused) {
                     continue
@@ -226,34 +235,27 @@ class AudioRecorder private constructor() : Recorder {
                                 recordVolume
                             )
                         }
-                        writeToFile(fos, audioData)
+                        //writeToFile(audioData)
                     } else {
                         val copy = ByteArray(audioSampleSize)
                         System.arraycopy(audioData, 0, copy, 0, audioSampleSize)
                         mainThread {
                             recordCallback?.onRecordProgress(copy, audioSampleSize, recordVolume)
                         }
-                        writeToFile(fos, copy)
+                        //writeToFile(copy)
                     }
                 }
             }
-            try {
-                fos?.flush()
-                fos?.close()
-            } catch (e: IOException) {
-                Log.e(TAG, "", e)
-            }
+//            try {
+//                fos?.flush()
+//                fos?.close()
+//            } catch (e: IOException) {
+//                Log.e(TAG, "", e)
+//            }
         }
     }
 
-    private fun writeToFile(fos: FileOutputStream?, data: ByteArray) {
-        if (fos == null) return
-        try {
-            fos.write(data)
-        } catch (e: IOException) {
-            Log.e(TAG, "", e)
-        }
-    }
+
 
     private fun getAudioRecordBuffer(
         scoringBufferMaxSize: Int,
