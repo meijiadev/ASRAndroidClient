@@ -3,7 +3,6 @@ package com.example.asrandroidclient.room.dao
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy.REPLACE
 import androidx.room.Query
 import androidx.room.Update
 import com.example.asrandroidclient.room.bean.VoiceBean
@@ -16,15 +15,15 @@ import com.example.asrandroidclient.room.bean.VoiceBean
 @Dao
 interface VoiceDao {
 
-    @Insert(onConflict = REPLACE)
+    @Insert
     fun insert(voiceBean: VoiceBean)
 
 
     @Delete
     fun deleteVoice(voiceBean: VoiceBean)
 
-    @Delete
-    fun deleteVoiceById(voiceId: String)
+//    @Delete
+//    fun deleteVoiceById(voiceId: String)
 
     @Update
     fun updateVoice(voiceBean: VoiceBean)

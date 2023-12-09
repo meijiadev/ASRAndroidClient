@@ -8,5 +8,5 @@ package com.example.asrandroidclient.webrtc.data.keyword
 data class KeyWords(
     val messageType: String,
     val time: String,
-    val data: List<Data>
+    val data: List<KeyData>
 )

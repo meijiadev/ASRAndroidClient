@@ -1,6 +1,6 @@
 package com.example.asrandroidclient.webrtc.data.keyword
 
-data class Data(
+data class KeyData(
     val credibility: Int,       //  可信度
     val delFlag: String,        // 删除标识 1：被删除
     val enabled: Boolean,      //是否启用
