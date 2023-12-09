@@ -5,11 +5,13 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.asrandroidclient.HandlerAction
+import com.example.asrandroidclient.LATEST_TIME_KEY
 import com.example.asrandroidclient.MyApp
 import com.example.asrandroidclient.data.UploadFileResult
 import com.example.asrandroidclient.room.AppDataBase
 import com.example.asrandroidclient.room.bean.KeywordBean
 import com.example.asrandroidclient.room.bean.VoiceBean
+import com.example.asrandroidclient.util.SpManager
 import com.example.asrandroidclient.webrtc.data.keyword.DeleteKeyword
 import com.example.asrandroidclient.webrtc.data.keyword.KeyWords
 import com.example.asrandroidclient.webrtc.data.keyword.Keyword
@@ -110,7 +112,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
     fun login() {
         Logger.i("login:$snCode")
-        mSocket?.emit("register", snCode, "1975-01-01 14:04:17")
+        val time=SpManager.getString(LATEST_TIME_KEY,"1975-01-01 14:04:17")
+        mSocket?.emit("register", snCode, time)
         //getUploadFileUrl()
     }
 
@@ -320,6 +323,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
                 MessageType.KeywordList.toString() -> {
                     val keywords = Gson().fromJson(it[1].toString(), KeyWords::class.java)
+                    SpManager.putString(LATEST_TIME_KEY, keywords.time)
                     val datas = keywords.data
                     Logger.i("datas：${keywords.data.size}")
                     viewModelScope.launch(Dispatchers.IO) {
