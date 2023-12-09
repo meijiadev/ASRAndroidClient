@@ -135,6 +135,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     }
 
     /**
+     * 可每日定时主动去获取key信息
      * 主动去获取msg信息(关键字 or 语音播报的文字)
      */
     fun getMsg() {
