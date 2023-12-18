@@ -211,7 +211,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 when (it) {
                     0, 1, 2 -> {
                         Logger.i("keyword 增删改 需要重启科大讯飞引擎")
-                        isRestart
+                        isRestart = true
                         restartIvw()
                     }
 
@@ -231,6 +231,17 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
                     3 -> {}
                 }
+            }
+        }
+
+        MyApp.socketEventViewModel.callEvent.observe(this) {
+            if (it == true) {
+                destroyIvw()
+                isRestart = true
+            } else {
+                isRestart = true
+                IFlytekAbilityManager.getInstance().initializeSdk(MyApp.CONTEXT)
+                initIvw()
             }
         }
 
@@ -426,22 +437,26 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         Logger.i("语音唤醒已结束...")
         ivwHelper?.stopAudioRecord()
         ivwHelper?.endAiHandle()
+        isRestart = false
     }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        isRestart = false
         ivwHelper?.destroy()
         ivwHelper = null
         super.onBackPressed()
     }
 
     override fun onDestroy() {
+        isRestart = false
         ivwHelper?.destroy()
         ivwHelper = null
         super.onDestroy()
     }
 
     override fun finish() {
+        isRestart = false
         ivwHelper?.destroy()
         ivwHelper = null
         super.finish()
@@ -464,7 +479,14 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             initIvw()
             Logger.i("重新初始化科大讯飞引擎")
         }
+    }
 
+    /*
+     * 销毁关闭
+     */
+    private fun destroyIvw() {
+        ivwHelper?.destroy()
+        ivwHelper = null
     }
 
     /**
@@ -493,6 +515,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             outputStream.write(data)
             // 关闭输出流
             outputStream.close()
+            return file
         }.onFailure {
             Logger.e("报警音频写入失败：${it.message}")
         }

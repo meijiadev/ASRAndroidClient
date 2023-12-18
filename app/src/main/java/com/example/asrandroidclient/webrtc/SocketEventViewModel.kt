@@ -55,6 +55,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
     var voiceUpdateEvent = UnPeekLiveData<Int>()
 
+
     companion object {
         const val KEYWORD_STATUS_ADD = 0
         const val KEYWORD_STATUS_EDIT = 1
@@ -97,7 +98,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         snCode = sn
         kotlin.runCatching {
             mSocket = IO.socket(
-                "http://192.168.1.6:7099/spad-cloud?token=1231&clientType=anti_bullying_device&clientId=$sn"
+                "http://cloud.zyq0407.com:8080/spad-cloud?token=1231&clientType=anti_bullying_device&clientId=$sn"
             )
         }.onFailure {
             Logger.e("${it.message}")
@@ -112,7 +113,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
     fun login() {
         Logger.i("login:$snCode")
-        val time=SpManager.getString(LATEST_TIME_KEY,"1975-01-01 14:04:17")
+        val time = SpManager.getString(LATEST_TIME_KEY, "1975-01-01 14:04:17")
         mSocket?.emit("register", snCode, time)
         //getUploadFileUrl()
     }
@@ -171,6 +172,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     fun sendCalled() {
         val message = Message("called", snCode, toId, null)
         mSocket?.emit("message", Gson().toJson(message))
+        Logger.i("send called:${Gson().toJson(message)}")
     }
 
 
@@ -181,7 +183,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     }
 
     fun icecandidate(iceCandidate: IceCandidate) {
-        val message = Message("icecandidate", snCode, toId, iceCandidate)
+        val message = Message("icecandidate", snCode, toId, Gson().toJson(iceCandidate))
         mSocket?.emit("message", Gson().toJson(message))
     }
 
@@ -204,13 +206,14 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                     Logger.i("on call ${it[0]}")
                     // CallSingleActivity.openActivity(App.instance?.applicationContext, toId, false, false)
                     // 对方发送的参数 snCodeId toId
-                    callEvent.postValue(true)
-                    toId = it[0].toString()
-                    Logger.i("来电了：snCode:${it[0]},to:${it[1]}")
+                    //callEvent.postValue(true)
+                    toId = message?.sendFrom.toString()
+                    Logger.i("来电了：snCode:${it[0]}")
                     msgEvent.postValue("call 来电了")
                     postDelayed({
                         sendCalled()
                     }, 100)
+                    callEvent.postValue(true)
                 }
 
                 "called" -> {
@@ -222,6 +225,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                     webRtcManager?.createLocalStream()
                     webRtcManager?.addLocalStream()
                     webRtcManager?.createOffer()
+                   // callEvent.postValue(true)
                 }
 
                 "offer" -> {
@@ -249,6 +253,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
                 "hangUp" -> {
                     webRtcManager?.release()
+                    callEvent.postValue(false)
                 }
 
                 "icecandidate" -> {

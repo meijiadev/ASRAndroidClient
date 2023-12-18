@@ -23,9 +23,9 @@ class IFlytekAbilityManager private constructor() {
 
         //在线授权校验间隔时长，默认为300s，可自定义设置，最短为60s，单位 秒
         private const val AUTH_INTERVAL = 333
-        const val APPID = "d02a1638"
-        const val APISecret = "NTNhZWQ3MzZkZmYwNjU0ZGJlMTIwYjk0"
-        const val APIKey = "535adaebba36e4efc7ee10bf5f684c8d"
+        const val APPID = "f18ca9eb"
+        const val APISecret = "YTRiOWI0NThiOGQ0NWYwZjZlZGNlODM1"
+        const val APIKey = "731ebf4effedcfa7974cdecc3b5b328e"
 
         @Volatile
         private var instance: IFlytekAbilityManager? = null
