@@ -102,6 +102,18 @@ class WebRtcManager(context: Context) : SdpObserver {
             val iceServers: MutableList<PeerConnection.IceServer> = ArrayList()
             //添加一个turn服务器,turn服务器主要用户下面的stun服务器打洞失败的时候使用这个turn服务器转发数据流，可以添加多个
             iceServers.add(
+                PeerConnection.IceServer.builder("stun:stun.l.google.com:19302") //这是你服务器的地址
+//                    .setUsername("sanjibao") //用户名
+//                    .setPassword("sanjibao1119") //密码
+                    .createIceServer()
+            )
+            iceServers.add(
+                PeerConnection.IceServer.builder("stun:39.108.177.117:3478?transport=udp") //这是你服务器的地址
+//                    .setUsername("sanjibao") //用户名
+//                    .setPassword("sanjibao1119") //密码
+                    .createIceServer()
+            )
+            iceServers.add(
                 PeerConnection.IceServer.builder("turn:39.108.177.117:3478") //这是你服务器的地址
                     .setUsername("sanjibao") //用户名
                     .setPassword("sanjibao1119") //密码

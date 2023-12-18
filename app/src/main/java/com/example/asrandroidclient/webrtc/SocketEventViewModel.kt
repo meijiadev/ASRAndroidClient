@@ -225,7 +225,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                     webRtcManager?.createLocalStream()
                     webRtcManager?.addLocalStream()
                     webRtcManager?.createOffer()
-                   // callEvent.postValue(true)
+                    // callEvent.postValue(true)
                 }
 
                 "offer" -> {
@@ -331,26 +331,30 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                     SpManager.putString(LATEST_TIME_KEY, keywords.time)
                     val datas = keywords.data
                     Logger.i("datas：${keywords.data.size}")
-                    viewModelScope.launch(Dispatchers.IO) {
-                        for (data in datas) {
-                            val keywordBean = KeywordBean(
-                                time = keywords.time,
-                                keywordId = data.keywordId,
-                                keyword = data.keyword,
-                                credibility = data.credibility,
-                                delFlag = data.delFlag,
-                                enabled = data.enabled,
-                                matchType = data.matchType,
-                                orgId = data.orgId
-                            )
-                            if (keywordBean.delFlag == "1") {
-                                AppDataBase.getInstance().deleteKeywordById(keywordBean.keywordId)
-                            } else {
-                                AppDataBase.getInstance().insert(keywordBean)
+                    if (keywords.data.isNotEmpty()){
+                        viewModelScope.launch(Dispatchers.IO) {
+                            for (data in datas) {
+                                val keywordBean = KeywordBean(
+                                    time = keywords.time,
+                                    keywordId = data.keywordId,
+                                    keyword = data.keyword,
+                                    credibility = data.credibility,
+                                    delFlag = data.delFlag,
+                                    enabled = data.enabled,
+                                    matchType = data.matchType,
+                                    orgId = data.orgId
+                                )
+                                if (keywordBean.delFlag == "1") {
+                                    AppDataBase.getInstance()
+                                        .deleteKeywordById(keywordBean.keywordId)
+                                } else {
+                                    AppDataBase.getInstance().insert(keywordBean)
+                                }
                             }
+                            delay(100)
+                            keywordUpdateEvent.postValue(KEYWORD_STATUS_LIST)
                         }
-                        delay(100)
-                        keywordUpdateEvent.postValue(KEYWORD_STATUS_LIST)
+
                     }
                 }
 
@@ -408,26 +412,28 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                 MessageType.VoiceList.toString() -> {
                     val voices = Gson().fromJson(it[1].toString(), VoiceDatas::class.java)
                     Logger.i("datas：${voices.data.size}")
-                    val datas = voices.data
-                    viewModelScope.launch(Dispatchers.IO) {
-                        for (data in datas) {
-                            val voiceBean = VoiceBean(
-                                time = voices.time,
-                                voiceId = data.voiceId,
-                                defaultFlag = data.defaultFlag,
-                                delFlag = data.delFlag,
-                                orgId = data.orgId,
-                                text = data.text,
-                                times = data.times
-                            )
-                            if (voiceBean.delFlag == "1") {
-                                AppDataBase.getInstance().deleteVoiceById(voiceBean.voiceId)
-                            } else {
-                                AppDataBase.getInstance().insert(voiceBean)
+                    if (voices.data.isNotEmpty()){
+                        val datas = voices.data
+                        viewModelScope.launch(Dispatchers.IO) {
+                            for (data in datas) {
+                                val voiceBean = VoiceBean(
+                                    time = voices.time,
+                                    voiceId = data.voiceId,
+                                    defaultFlag = data.defaultFlag,
+                                    delFlag = data.delFlag,
+                                    orgId = data.orgId,
+                                    text = data.text,
+                                    times = data.times
+                                )
+                                if (voiceBean.delFlag == "1") {
+                                    AppDataBase.getInstance().deleteVoiceById(voiceBean.voiceId)
+                                } else {
+                                    AppDataBase.getInstance().insert(voiceBean)
+                                }
                             }
+                            delay(100)
+                            voiceUpdateEvent.postValue(VOICE_STATUS_LIST)
                         }
-                        delay(100)
-                        voiceUpdateEvent.postValue(VOICE_STATUS_LIST)
                     }
 
                 }

@@ -19,6 +19,7 @@ import com.example.asrandroidclient.room.AppDataBase
 import com.example.asrandroidclient.room.bean.KeywordBean
 import com.example.asrandroidclient.tool.ByteArrayQueue
 import com.example.asrandroidclient.tool.PCMEncoderAAC
+import com.example.asrandroidclient.tool.PcmToWavConverter
 import com.example.asrandroidclient.tool.calculateVolume
 import com.example.asrandroidclient.tool.stampToDate
 import com.google.gson.Gson
@@ -393,32 +394,37 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 val enable = keywordBean?.enabled ?: true
                 Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled}")
                 val alarmFile = writeBytesToFile()
-                if (rtl.ncm_keyword > credibility && enable) {
-                    //if (rs.contains("救命救命")) {
-                    for (i in 0 until speechMsgTimes) {
-                        textToSpeech?.speak(
-                            (speechMsg ?: "请勿打架斗殴"),
-                            TextToSpeech.QUEUE_ADD,
-                            null,
-                            null
-                        )
-                    }
-                    if (keywordBean != null) {
-                        val key = rtl.keyword
-                        val keyId = keywordBean.keywordId.toLong()
-                        val ncm = rtl.ncm_keyword
-                        val duration = (rtl.iduration * 10).toString()
-                        if (alarmFile != null)
-                            MyApp.socketEventViewModel.getUploadFileUrl(
-                                key,
-                                keyId,
-                                ncm,
-                                duration,
-                                alarmFile
+                val wavPath =
+                    FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
+                if (alarmFile != null) {
+                    PcmToWavConverter.pcmToWav(alarmFile, wavPath)
+                    if (rtl.ncm_keyword > credibility && enable) {
+                        //if (rs.contains("救命救命")) {
+                        for (i in 0 until speechMsgTimes) {
+                            textToSpeech?.speak(
+                                (speechMsg ?: "请勿打架斗殴"),
+                                TextToSpeech.QUEUE_ADD,
+                                null,
+                                null
                             )
-                        //MyApp.socketEventViewModel.uploadWarnMsg(key, keyId, ncm, duration)
+                        }
+                        if (keywordBean != null) {
+                            val key = rtl.keyword
+                            val keyId = keywordBean.keywordId.toLong()
+                            val ncm = rtl.ncm_keyword
+                            val duration = (rtl.iduration * 10).toString()
+                            if (alarmFile != null)
+                                MyApp.socketEventViewModel.getUploadFileUrl(
+                                    key,
+                                    keyId,
+                                    ncm,
+                                    duration,
+                                    File(wavPath)
+                                )
+                            //MyApp.socketEventViewModel.uploadWarnMsg(key, keyId, ncm, duration)
+                        }
+                        // }
                     }
-                    // }
                 }
             }
         }.onFailure {
@@ -506,7 +512,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     /**
      * 将缓冲区中的音频写入到字节数组中
      */
-    private fun writeBytesToFile(): File? {
+    private fun writeBytesToFile(): String? {
         kotlin.runCatching {
             val data = byteArrayQueue.popAll()
             val pcmName = (System.currentTimeMillis()).stampToDate() + ".pcm"
@@ -515,7 +521,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             outputStream.write(data)
             // 关闭输出流
             outputStream.close()
-            return file
+            return file.absolutePath
         }.onFailure {
             Logger.e("报警音频写入失败：${it.message}")
         }

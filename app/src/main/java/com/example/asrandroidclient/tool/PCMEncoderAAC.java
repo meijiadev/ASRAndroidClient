@@ -15,11 +15,11 @@ import java.nio.ByteBuffer;
 public class PCMEncoderAAC {
 
     //比特率
-    private final static int KEY_BIT_RATE = 96000;
+    private final static int KEY_BIT_RATE = 16000;
     //读取数据的最大字节数
     private final static int KEY_MAX_INPUT_SIZE = 1024 * 1024;
     //声道数
-    private final static int CHANNEL_COUNT = 2;
+    private final static int CHANNEL_COUNT = 1;
     private MediaCodec mediaCodec;
     private ByteBuffer[] encodeInputBuffers;
     private ByteBuffer[] encodeOutputBuffers;
