@@ -108,20 +108,20 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     /**
      * 获取语音播报的文本信息
      */
-    private fun initVoice() {
-        MainScope().launch(Dispatchers.IO) {
-            val voiceDatas = AppDataBase.getInstance().voiceDao().getAllVoice()
-            if (voiceDatas != null) {
-                for (voice in voiceDatas) {
-                    if (voice.defaultFlag) {
-                        speechMsg = voice.text
-                        speechMsgTimes = voice.times
-                        Logger.i("播报的语音：$speechMsg")
-                    }
-                }
-            }
-        }
-    }
+//    private fun initVoice() {
+//        MainScope().launch(Dispatchers.IO) {
+//            val voiceDatas = AppDataBase.getInstance().voiceDao().getAllVoice()
+//            if (voiceDatas != null) {
+//                for (voice in voiceDatas) {
+//                    if (voice.defaultFlag) {
+//                        speechMsg = voice.text
+//                        speechMsgTimes = voice.times
+//                        Logger.i("播报的语音：$speechMsg")
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     /**
      * 获取数据库中的keywords表中的数据
@@ -225,7 +225,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         MyApp.socketEventViewModel.voiceUpdateEvent.observe(this) {
             it?.let {
                 Logger.i("更新voice信息")
-                initVoice()
+                //initVoice()
                 when (it) {
                     0, 1, 2 -> {
                     }
@@ -392,7 +392,11 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     AppDataBase.getInstance().keyWordDao().findByKeyword(rtl.keyword)
                 val credibility = keywordBean?.credibility ?: 900
                 val enable = keywordBean?.enabled ?: true
-                Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled}")
+                val voiceId = keywordBean?.voiceId
+                val voiceBean = AppDataBase.getInstance().voiceDao().findById(voiceId)
+                speechMsg = voiceBean?.text ?: "请勿打架斗殴"
+                speechMsgTimes = voiceBean?.times ?: 1
+                Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg")
                 val alarmFile = writeBytesToFile()
                 val wavPath =
                     FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
@@ -402,7 +406,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                         //if (rs.contains("救命救命")) {
                         for (i in 0 until speechMsgTimes) {
                             textToSpeech?.speak(
-                                (speechMsg ?: "请勿打架斗殴"),
+                                speechMsg,
                                 TextToSpeech.QUEUE_ADD,
                                 null,
                                 null

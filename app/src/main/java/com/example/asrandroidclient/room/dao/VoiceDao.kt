@@ -29,7 +29,7 @@ interface VoiceDao {
     fun updateVoice(voiceBean: VoiceBean)
 
     @Query("SELECT*FROM voices WHERE voiceId=:id")
-    fun findById(id: String): VoiceBean?
+    fun findById(id: String?): VoiceBean?
 
 
     @Query("SELECT*FROM voices")

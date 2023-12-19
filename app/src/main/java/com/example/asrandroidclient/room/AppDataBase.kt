@@ -18,7 +18,7 @@ import com.orhanobut.logger.Logger
  * Create by MJ on 2023/12/4.
  * Describe :
  */
-@Database(entities = [KeywordBean::class, VoiceBean::class], version = 1, exportSchema = true)
+@Database(entities = [KeywordBean::class, VoiceBean::class], version = 2, exportSchema = true)
 abstract class AppDataBase : RoomDatabase() {
 
     abstract fun keyWordDao(): KeywordDao

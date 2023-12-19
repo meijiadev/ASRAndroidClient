@@ -283,8 +283,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                             delFlag = data.delFlag,
                             enabled = data.enabled,
                             matchType = data.matchType,
-                            orgId = data.orgId
-
+                            orgId = data.orgId,
+                            voiceId = data.voiceId
                         )
                         if (AppDataBase.getInstance().insert(keywordBean)) {
                             delay(100)
@@ -308,6 +308,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                             enabled = data.enabled
                             matchType = data.matchType
                             orgId = data.orgId
+                            voiceId = data.voiceId
                         }
                         AppDataBase.getInstance().keyWordDao().updateKeyword(result!!)
                         delay(100)
@@ -331,7 +332,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                     SpManager.putString(LATEST_TIME_KEY, keywords.time)
                     val datas = keywords.data
                     Logger.i("datas：${keywords.data.size}")
-                    if (keywords.data.isNotEmpty()){
+                    if (keywords.data.isNotEmpty()) {
                         viewModelScope.launch(Dispatchers.IO) {
                             for (data in datas) {
                                 val keywordBean = KeywordBean(
@@ -342,7 +343,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                                     delFlag = data.delFlag,
                                     enabled = data.enabled,
                                     matchType = data.matchType,
-                                    orgId = data.orgId
+                                    orgId = data.orgId,
+                                    voiceId = data.voiceId
                                 )
                                 if (keywordBean.delFlag == "1") {
                                     AppDataBase.getInstance()
@@ -412,7 +414,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                 MessageType.VoiceList.toString() -> {
                     val voices = Gson().fromJson(it[1].toString(), VoiceDatas::class.java)
                     Logger.i("datas：${voices.data.size}")
-                    if (voices.data.isNotEmpty()){
+                    if (voices.data.isNotEmpty()) {
                         val datas = voices.data
                         viewModelScope.launch(Dispatchers.IO) {
                             for (data in datas) {

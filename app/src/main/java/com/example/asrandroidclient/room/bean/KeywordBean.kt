@@ -32,4 +32,6 @@ data class KeywordBean(
     var matchType: String,                      // 匹配类型
     @ColumnInfo(name = "orgId")
     var orgId: String,                        //所属组织
+    @ColumnInfo(name = "voiceId")
+    var voiceId: String
 )
