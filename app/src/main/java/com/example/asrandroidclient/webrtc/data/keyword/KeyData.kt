@@ -8,5 +8,6 @@ data class KeyData(
     val keywordId: String,     // 关键字Id
     val matchType: String,     // 匹配类型
     val orgId: String,         //所属组织
-    val updateTime: String     // 命令下发时间
+    val updateTime: String,     // 命令下发时间
+    val voiceId: String
 )
