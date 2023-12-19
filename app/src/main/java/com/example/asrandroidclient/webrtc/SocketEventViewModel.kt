@@ -66,6 +66,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         const val VOICE_STATUS_EDIT = 1
         const val VOICE_STATUS_DEL = 2
         const val VOICE_STATUS_LIST = 3
+
+        const val BASE_URL = "http://cloud.zyq0407.com:8080"
     }
 
 
@@ -98,7 +100,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         snCode = sn
         kotlin.runCatching {
             mSocket = IO.socket(
-                "http://cloud.zyq0407.com:8080/spad-cloud?token=1231&clientType=anti_bullying_device&clientId=$sn"
+                "$BASE_URL/spad-cloud?token=1231&clientType=anti_bullying_device&clientId=$sn"
             )
         }.onFailure {
             Logger.e("${it.message}")
