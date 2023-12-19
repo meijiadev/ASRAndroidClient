@@ -6,6 +6,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.asrandroidclient.MyApp
 import com.example.asrandroidclient.room.bean.KeywordBean
@@ -93,11 +94,22 @@ abstract class AppDataBase : RoomDatabase() {
 
         private fun buildDataBase(context: Context): AppDataBase {
             return Room.databaseBuilder(context, AppDataBase::class.java, "arpha-database")
+                .addMigrations(MIGRATION_1_2)
+                .allowMainThreadQueries()
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
                     }
                 }).build()
         }
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE keywords ADD COLUMN voiceId TEXT NOT NULL DEFAULT 'null'")
+            }
+        }
+
     }
+
+
 }

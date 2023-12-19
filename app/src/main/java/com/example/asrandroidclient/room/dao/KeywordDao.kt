@@ -45,7 +45,7 @@ interface KeywordDao {
     fun findById(id: String): KeywordBean?
 
     @Query("SELECT*FROM keywords WHERE keyword=:key")
-    fun findByKeyword(key:String):KeywordBean?
+    fun findByKeyword(key: String): KeywordBean?
 
     @Query("SELECT*FROM keywords")
     fun getAllKey(): MutableList<KeywordBean>?

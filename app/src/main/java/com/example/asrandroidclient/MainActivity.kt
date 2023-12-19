@@ -447,7 +447,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         Logger.i("语音唤醒已结束...")
         ivwHelper?.stopAudioRecord()
         ivwHelper?.endAiHandle()
-        isRestart = false
+        //isRestart = false
     }
 
     @Deprecated("Deprecated in Java")

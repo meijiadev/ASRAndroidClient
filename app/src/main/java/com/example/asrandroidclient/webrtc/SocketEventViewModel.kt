@@ -268,7 +268,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
         mSocket?.on("syncMessage") {
             val msgType = it[0].toString()
-            Logger.i("syncMessage：${it[0].toString()}")
+            Logger.i("messageType：${it[0].toString()}")
             Logger.i("syncMsg:${it[1].toString()}")
             when (msgType) {
 
