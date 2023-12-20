@@ -297,8 +297,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
 
     override fun onPause() {
-        textToSpeech?.stop()
-        textToSpeech?.shutdown()
+//        textToSpeech?.stop()
+//        textToSpeech?.shutdown()
         super.onPause()
     }
 
@@ -396,13 +396,13 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 val voiceBean = AppDataBase.getInstance().voiceDao().findById(voiceId)
                 speechMsg = voiceBean?.text ?: "请勿打架斗殴"
                 speechMsgTimes = voiceBean?.times ?: 1
-                Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg")
+                Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$calculateVolume")
                 val alarmFile = writeBytesToFile()
                 val wavPath =
                     FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
                 if (alarmFile != null) {
                     PcmToWavConverter.pcmToWav(alarmFile, wavPath)
-                    if (rtl.ncm_keyword > credibility && enable) {
+                    if (rtl.ncm_keyword > credibility && enable && calculateVolume > 18) {
                         //if (rs.contains("救命救命")) {
                         for (i in 0 until speechMsgTimes) {
                             textToSpeech?.speak(
@@ -462,6 +462,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         isRestart = false
         ivwHelper?.destroy()
         ivwHelper = null
+        textToSpeech?.stop()
+        textToSpeech?.shutdown()
         super.onDestroy()
     }
 
