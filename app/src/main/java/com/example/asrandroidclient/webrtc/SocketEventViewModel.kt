@@ -21,6 +21,7 @@ import com.example.asrandroidclient.webrtc.data.voice.VoiceDatas
 import com.google.gson.Gson
 import com.kunminx.architecture.ui.callback.UnPeekLiveData
 import com.orhanobut.logger.Logger
+import io.socket.client.Ack
 import io.socket.client.IO
 import io.socket.client.Socket
 import kotlinx.coroutines.Dispatchers
@@ -101,7 +102,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         snCode = sn
         kotlin.runCatching {
             mSocket = IO.socket(
-                "$BASE_URL_DEV/spad-cloud?token=1231&clientType=anti_bullying_device&clientId=$sn"
+                "$BASE_URL/spad-cloud?token=1231&clientType=anti_bullying_device&clientId=$sn"
             )
         }.onFailure {
             Logger.e("${it.message}")
@@ -174,34 +175,74 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
      */
     fun sendCalled() {
         val message = Message("called", snCode, toId, null)
-        mSocket?.emit("message", Gson().toJson(message))
+        mSocket?.emit("message", Gson().toJson(message), Ack { ack ->
+            if (ack?.isEmpty() == true) {
+                Logger.i("ack为空")
+            } else {
+                Logger.i("接收ack:${ack[0].toString()}")
+            }
+
+        })
         Logger.i("send called:${Gson().toJson(message)}")
     }
 
 
     fun sendHangUp() {
         val message = Message("hangUp", snCode, toId, null)
-        mSocket?.emit("message", Gson().toJson(message))
+        mSocket?.emit("message", Gson().toJson(message), Ack { ack ->
+            if (ack?.isEmpty() == true) {
+                Logger.i("ack为空")
+            } else {
+                Logger.i("接收ack:${ack[0].toString()}")
+            }
+
+        })
         webRtcManager?.release()
     }
 
     fun icecandidate(iceCandidate: IceCandidate) {
         val message = Message("icecandidate", snCode, toId, Gson().toJson(iceCandidate))
-        mSocket?.emit("message", Gson().toJson(message))
+        mSocket?.emit("message", Gson().toJson(message), Ack { ack ->
+            if (ack?.isEmpty() == true) {
+                Logger.i("ack为空")
+            } else {
+                Logger.i("接收ack:${ack[0].toString()}")
+            }
+
+        })
     }
 
     fun sendOffer(offer: SessionDescription) {
         val message = Message("offer", snCode, toId, offer.description)
-        mSocket?.emit("message", Gson().toJson(message))
+        mSocket?.emit("message", Gson().toJson(message), Ack { ack ->
+            if (ack?.isEmpty() == true) {
+                Logger.i("ack为空")
+            } else {
+                Logger.i("接收ack:${ack[0].toString()}")
+            }
+        })
     }
 
     fun sendAnswer(answer: SessionDescription) {
         val message = Message("answer", snCode, toId, answer.description)
-        mSocket?.emit("message", Gson().toJson(message))
+        mSocket?.emit("message", Gson().toJson(message), Ack { ack ->
+            if (ack?.isEmpty() == true) {
+                Logger.i("ack为空")
+            } else {
+                Logger.i("接收ack:${ack[0].toString()}")
+            }
+
+        })
     }
 
     private fun receiveMessage() {
         mSocket?.on("message") {
+            for (a in it) {
+                Logger.i("message：${a.toString()}")
+            }
+            val isAck = it[1] is Ack
+            Logger.i("最后一个参数是否是ack:$isAck")
+            //mSocket?.emit("ack", "success")
             val message = Gson().fromJson(it[0].toString(), Message::class.java)
             Logger.e(message.msgType)
             when (message.msgType) {
