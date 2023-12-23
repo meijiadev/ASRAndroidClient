@@ -19,7 +19,7 @@ import com.orhanobut.logger.Logger
  * Create by MJ on 2023/12/4.
  * Describe :
  */
-@Database(entities = [KeywordBean::class, VoiceBean::class], version = 2, exportSchema = true)
+@Database(entities = [KeywordBean::class, VoiceBean::class], version = 1, exportSchema = true)
 abstract class AppDataBase : RoomDatabase() {
 
     abstract fun keyWordDao(): KeywordDao
@@ -94,8 +94,8 @@ abstract class AppDataBase : RoomDatabase() {
 
         private fun buildDataBase(context: Context): AppDataBase {
             return Room.databaseBuilder(context, AppDataBase::class.java, "arpha-database")
-                .addMigrations(MIGRATION_1_2)
-                .allowMainThreadQueries()
+               // .addMigrations(MIGRATION_1_2)
+               // .allowMainThreadQueries()
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)

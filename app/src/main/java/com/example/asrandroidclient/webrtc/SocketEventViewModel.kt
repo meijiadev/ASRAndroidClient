@@ -69,7 +69,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         const val VOICE_STATUS_LIST = 3
 
         const val BASE_URL = "http://cloud.zyq0407.com:8080"
-        const val BASE_URL_DEV = "http://192.168.1.6:7099"
+        const val BASE_URL_DEV = "http://192.168.1.6:80"
     }
 
 
@@ -102,7 +102,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         snCode = sn
         kotlin.runCatching {
             mSocket = IO.socket(
-                "$BASE_URL/spad-cloud?token=1231&clientType=anti_bullying_device&clientId=$sn"
+                "$BASE_URL_DEV/spad-cloud?token=1231&clientType=anti_bullying_device&clientId=$sn"
             )
         }.onFailure {
             Logger.e("${it.message}")
@@ -116,9 +116,9 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
 
     fun login() {
-        Logger.i("login:$snCode")
         val time = SpManager.getString(LATEST_TIME_KEY, "1975-01-01 14:04:17")
         mSocket?.emit("register", snCode, time)
+        Logger.i("login:$snCode,time:$time")
         //getUploadFileUrl()
     }
 
@@ -240,8 +240,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
             for (a in it) {
                 Logger.i("message：${a.toString()}")
             }
-            val isAck = it[1] is Ack
-            Logger.i("最后一个参数是否是ack:$isAck")
+//            val isAck = it[1] is Ack
+//            Logger.i("最后一个参数是否是ack:$isAck")
             //mSocket?.emit("ack", "success")
             val message = Gson().fromJson(it[0].toString(), Message::class.java)
             Logger.e(message.msgType)
@@ -313,7 +313,6 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
             Logger.i("messageType：${it[0].toString()}")
             Logger.i("syncMsg:${it[1].toString()}")
             when (msgType) {
-
                 MessageType.KeywordAdd.toString() -> {
                     val keyword = Gson().fromJson(it[1].toString(), Keyword::class.java)
                     val data = keyword.keyData

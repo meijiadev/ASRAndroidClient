@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
      * 是否是语音引擎重启
      */
     private var isRestart = false
-    private var pcmEncoderAAC: PCMEncoderAAC? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -278,6 +278,10 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         MainScope().launch(Dispatchers.IO) {
             var keyStr = ""
             val keywords = getKeywords()
+            if (keywords.isNullOrEmpty() == true) {
+                MyApp.socketEventViewModel.getMsg()
+                return@launch
+            }
             if (keywords != null) {
                 for (key in keywords) {
                     keyStr = keyStr + key.keyword + ";"
@@ -402,7 +406,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
                 if (alarmFile != null) {
                     PcmToWavConverter.pcmToWav(alarmFile, wavPath)
-                    if (rtl.ncm_keyword > credibility && enable && calculateVolume > 18) {
+                    if (rtl.ncm_keyword > credibility && enable) {
                         //if (rs.contains("救命救命")) {
                         for (i in 0 until speechMsgTimes) {
                             textToSpeech?.speak(

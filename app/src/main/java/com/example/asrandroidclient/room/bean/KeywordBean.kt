@@ -33,5 +33,5 @@ data class KeywordBean(
     @ColumnInfo(name = "orgId")
     var orgId: String,                        //所属组织
     @ColumnInfo(name = "voiceId")
-    var voiceId: String
+    var voiceId: String?
 )
