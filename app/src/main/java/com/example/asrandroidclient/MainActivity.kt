@@ -235,7 +235,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             }
         }
 
-        MyApp.socketEventViewModel.callEvent.observe(this) {
+        MyApp.webrtcSocketManager.callEvent.observe(this) {
             if (it == true) {
                 destroyIvw()
                 isRestart = true

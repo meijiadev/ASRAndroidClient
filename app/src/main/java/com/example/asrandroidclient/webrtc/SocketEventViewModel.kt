@@ -47,7 +47,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     var loginEvent = MutableLiveData<Boolean>()
 
     // 被呼叫或者呼叫别人
-    var callEvent = UnPeekLiveData<Boolean>()
+    //var callEvent = UnPeekLiveData<Boolean>()
 
     var msgEvent = UnPeekLiveData<String>()
 
@@ -55,6 +55,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     var keywordUpdateEvent = UnPeekLiveData<Int>()
 
     var voiceUpdateEvent = UnPeekLiveData<Int>()
+
+    private var isConnected = false
 
 
     companion object {
@@ -68,15 +70,20 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         const val VOICE_STATUS_DEL = 2
         const val VOICE_STATUS_LIST = 3
 
-        const val BASE_URL = "http://cloud.zyq0407.com:8080"
-        const val BASE_URL_DEV = "http://192.168.1.6:80"
+        // http://192.168.1.6:80/webrtc?
+        //http://192.168.1.6:80/device?
+//        const val BASE_URL = "http://cloud.zyq0407.com:8080"
+//        const val BASE_URL_DEV = "http://192.168.1.6:80"
+        //
+        const val DEV_DEVICE_URL = "http://192.168.1.6:80/device?"
     }
 
 
     //var from: String = "SN012345678902"
     var toId: String = "SN012345678901"
+    var uuid: String? = null
     private var mSocket: Socket? = null
-    private var webRtcManager: WebRtcManager? = null
+    //private var webRtcManager: WebRtcManager? = null
 
     private var snCode: String? = null
 
@@ -102,14 +109,14 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         snCode = sn
         kotlin.runCatching {
             mSocket = IO.socket(
-                "$BASE_URL_DEV/spad-cloud?token=1231&clientType=anti_bullying_device&clientId=$sn"
+                "${DEV_DEVICE_URL}token=1231&clientType=anti_bullying_device&clientId=$sn"
             )
         }.onFailure {
             Logger.e("${it.message}")
         }
         mSocket?.connect()
         receiveMessage()
-        webRtcManager = WebRtcManager(MyApp.CONTEXT)
+        // webRtcManager = WebRtcManager(MyApp.CONTEXT)
         // this.from = sn
         Logger.i("初始化socket:${mSocket?.isActive}")
     }
@@ -125,7 +132,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     fun call(toId: String) {
         Logger.i("call ,$toId")
         this.toId = toId
-        val message = Message("call", snCode, toId, null)
+        val message = Message("call", snCode, toId, null, null)
         mSocket?.emit("message", Gson().toJson(message))
     }
 
@@ -170,141 +177,24 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     }
 
 
-    /**
-     * 收到对方语音请求，同意语音通话发送called
-     */
-    fun sendCalled() {
-        val message = Message("called", snCode, toId, null)
-        mSocket?.emit("message", Gson().toJson(message), Ack { ack ->
-            if (ack?.isEmpty() == true) {
-                Logger.i("ack为空")
-            } else {
-                Logger.i("接收ack:${ack[0].toString()}")
-            }
-
-        })
-        Logger.i("send called:${Gson().toJson(message)}")
-    }
-
-
-    fun sendHangUp() {
-        val message = Message("hangUp", snCode, toId, null)
-        mSocket?.emit("message", Gson().toJson(message), Ack { ack ->
-            if (ack?.isEmpty() == true) {
-                Logger.i("ack为空")
-            } else {
-                Logger.i("接收ack:${ack[0].toString()}")
-            }
-
-        })
-        webRtcManager?.release()
-    }
-
-    fun icecandidate(iceCandidate: IceCandidate) {
-        val message = Message("icecandidate", snCode, toId, Gson().toJson(iceCandidate))
-        mSocket?.emit("message", Gson().toJson(message), Ack { ack ->
-            if (ack?.isEmpty() == true) {
-                Logger.i("ack为空")
-            } else {
-                Logger.i("接收ack:${ack[0].toString()}")
-            }
-
-        })
-    }
-
-    fun sendOffer(offer: SessionDescription) {
-        val message = Message("offer", snCode, toId, offer.description)
-        mSocket?.emit("message", Gson().toJson(message), Ack { ack ->
-            if (ack?.isEmpty() == true) {
-                Logger.i("ack为空")
-            } else {
-                Logger.i("接收ack:${ack[0].toString()}")
-            }
-        })
-    }
-
-    fun sendAnswer(answer: SessionDescription) {
-        val message = Message("answer", snCode, toId, answer.description)
-        mSocket?.emit("message", Gson().toJson(message), Ack { ack ->
-            if (ack?.isEmpty() == true) {
-                Logger.i("ack为空")
-            } else {
-                Logger.i("接收ack:${ack[0].toString()}")
-            }
-
-        })
-    }
-
     private fun receiveMessage() {
-        mSocket?.on("message") {
+        mSocket?.on("call") {
             for (a in it) {
                 Logger.i("message：${a.toString()}")
             }
-//            val isAck = it[1] is Ack
-//            Logger.i("最后一个参数是否是ack:$isAck")
-            //mSocket?.emit("ack", "success")
             val message = Gson().fromJson(it[0].toString(), Message::class.java)
             Logger.e(message.msgType)
             when (message.msgType) {
                 "call" -> {
                     Logger.i("on call ${it[0]}")
-                    // CallSingleActivity.openActivity(App.instance?.applicationContext, toId, false, false)
-                    // 对方发送的参数 snCodeId toId
-                    //callEvent.postValue(true)
                     toId = message?.sendFrom.toString()
+                    uuid = message?.tx
                     Logger.i("来电了：snCode:${it[0]}")
                     msgEvent.postValue("call 来电了")
-                    postDelayed({
-                        sendCalled()
-                    }, 100)
-                    callEvent.postValue(true)
+                    MyApp.webrtcSocketManager.createWebrtcSc(snCode, toId,uuid)
+                    //callEvent.postValue(true)
                 }
 
-                "called" -> {
-                    msgEvent.postValue("called 接通了")
-                    Logger.i("on called ${it[0]}")
-                    //此处发送offer
-                    webRtcManager?.createPeerConnect()
-                    webRtcManager?.isOffer = true
-                    webRtcManager?.createLocalStream()
-                    webRtcManager?.addLocalStream()
-                    webRtcManager?.createOffer()
-                    // callEvent.postValue(true)
-                }
-
-                "offer" -> {
-                    val sdp =
-                        SessionDescription(SessionDescription.Type.OFFER, message.data.toString())
-                    Logger.i("接收到的sdp:${sdp.description}")
-                    //  发送answer 并设置remote sdp
-                    webRtcManager?.isOffer = false
-                    webRtcManager?.createPeerConnect()
-                    webRtcManager?.createLocalStream()
-                    webRtcManager?.addLocalStream()
-                    webRtcManager?.setRemoteDescription(sdp)
-//                    sendAnswer(sdp)
-                    webRtcManager?.createAnswer()
-                }
-
-                "answer" -> {
-                    // 设置 remote sdp
-                    Logger.i("receive answer:${message.data}")
-                    val sdp =
-                        SessionDescription(SessionDescription.Type.ANSWER, message.data.toString())
-                    //  发送answer 并设置remote sdp
-                    webRtcManager?.setRemoteDescription(sdp)
-                }
-
-                "hangUp" -> {
-                    webRtcManager?.release()
-                    callEvent.postValue(false)
-                }
-
-                "icecandidate" -> {
-                    Logger.d("ice:${message.data}")
-                    val ice = Gson().fromJson(message.data.toString(), IceCandidate::class.java)
-                    webRtcManager?.addIce(ice)
-                }
             }
         }
 
@@ -497,14 +387,21 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         }
 
 
-        mSocket?.on("connect") {
-            Logger.i("socket.io 正在连接")
-            msgEvent.postValue("connect ..正在连接")
+        mSocket?.on(Socket.EVENT_CONNECT) {
+            Logger.i("socket.io 连接成功")
+            msgEvent.postValue("connect ..连接成功")
             login()
+            isConnected = true
         }
 
-        mSocket?.on("disconnected") {
+        mSocket?.on(Socket.EVENT_CONNECT_ERROR) {
+            Logger.e("socket.io 连接错误：${it[0]}")
+            isConnected = false
+        }
+
+        mSocket?.on(Socket.EVENT_DISCONNECT) {
             Logger.i("socket.io 断开连接")
+            isConnected = false
         }
 
     }
