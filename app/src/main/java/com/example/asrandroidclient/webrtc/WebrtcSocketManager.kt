@@ -160,6 +160,7 @@ class WebrtcSocketManager : BaseViewModel() {
             Logger.e(message.msgType)
             when (message.msgType) {
                 "called" -> {
+                    // 此处只有在拨打别人电话时才会被调用
                     // msgEvent.postValue("called 接通了")
                     Logger.i("on called ${it[0]}")
                     //此处发送offer
@@ -168,7 +169,6 @@ class WebrtcSocketManager : BaseViewModel() {
                     webRtcManager?.createLocalStream()
                     webRtcManager?.addLocalStream()
                     webRtcManager?.createOffer()
-                    callEvent.postValue(true)
                 }
 
                 "offer" -> {

@@ -1,6 +1,8 @@
 package com.example.asrandroidclient
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.media.AudioManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.view.View
@@ -38,6 +40,7 @@ import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import java.nio.charset.Charset
 import java.util.Locale
+import kotlin.math.max
 
 
 class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
@@ -82,6 +85,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     private var isRunning = true
 
+    private var audioManager: AudioManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,6 +122,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         initViewModel()
         initYsAndroidApi()
         checkIVW()
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager?
     }
 
 
@@ -188,7 +193,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             // 打开网络adb连接
             myManager.setNetworkAdb(true)
             // 设置守护进程 0:30s  1：60s   2:180s
-            // myManager.daemon("com.sjb.securitydoormanager", 0)
+            myManager.daemon("com.sjb.securitydoormanager", 0)
             initSocket()
         }
     }
@@ -254,6 +259,13 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
         MyApp.webrtcSocketManager.callEvent.observe(this) {
             if (it == true) {
+                audioManager?.isSpeakerphoneOn = true
+                val maxVolume =
+                    audioManager?.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL) ?: 100
+                audioManager?.adjustStreamVolume(
+                    AudioManager.STREAM_VOICE_CALL, AudioManager.ADJUST_RAISE,
+                    maxVolume
+                )
                 isVoiceCall = true
                 destroyIvw()
                 isRestart = true
@@ -330,7 +342,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                         restartIvw()
                     }
                 } else {
-                    Logger.i("语音引擎是否启动：$ivwIsOpen,是否正在通话：$isVoiceCall,是否正在引擎初始化中：$isBeingStarted")
+                    Logger.d("语音引擎是否启动：$ivwIsOpen,是否正在通话：$isVoiceCall,是否正在引擎初始化中：$isBeingStarted")
                 }
             }
         }
@@ -471,6 +483,11 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
 
+    fun openSpeaker() {
+        audioManager?.isSpeakerphoneOn = true
+    }
+
+
     override fun onAbilityError(code: Int, error: Throwable?) {
         Logger.e("语音唤醒error：$code,msg:${error?.message}")
         ivwHelper?.stopAudioRecord()
@@ -485,6 +502,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         ivwHelper?.endAiHandle()
         // 已经启动完成
         isBeingStarted = false
+        ivwIsOpen = false
         //isRestart = false
     }
 

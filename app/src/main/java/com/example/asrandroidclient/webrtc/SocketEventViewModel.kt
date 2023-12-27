@@ -197,6 +197,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                     MyApp.webrtcSocketManager.createWebrtcSc(snCode, toId, uuid)
                     isAnswer = false
                     //callEvent.postValue(true)
+                    MyApp.webrtcSocketManager.callEvent.postValue(true)
                 }
 
             }
