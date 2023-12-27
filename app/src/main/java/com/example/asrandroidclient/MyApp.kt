@@ -8,6 +8,7 @@ import com.example.asrandroidclient.webrtc.SocketEventViewModel
 import com.example.asrandroidclient.webrtc.WebrtcSocketManager
 import com.orhanobut.logger.AndroidLogAdapter
 import com.orhanobut.logger.Logger
+import com.orhanobut.logger.PrettyFormatStrategy
 import com.sjb.base.base.BaseApplication
 
 class MyApp : BaseApplication() {
@@ -28,7 +29,13 @@ class MyApp : BaseApplication() {
     override fun onCreate() {
         super.onCreate()
         CONTEXT = this
-        Logger.addLogAdapter(AndroidLogAdapter())
+        val formatStrategy = PrettyFormatStrategy
+            .newBuilder()
+            .showThreadInfo(false)
+            .methodCount(2)
+            .tag("MJ")
+            .build()
+        Logger.addLogAdapter(AndroidLogAdapter(formatStrategy))
         SpManager.init(this)
         mainViewModel = getApplicationViewModel(MainViewModel::class.java)
         socketEventViewModel = getApplicationViewModel(SocketEventViewModel::class.java)

@@ -11,6 +11,7 @@ import com.example.asrandroidclient.data.UploadFileResult
 import com.example.asrandroidclient.room.AppDataBase
 import com.example.asrandroidclient.room.bean.KeywordBean
 import com.example.asrandroidclient.room.bean.VoiceBean
+import com.example.asrandroidclient.tool.NetworkUtil
 import com.example.asrandroidclient.util.SpManager
 import com.example.asrandroidclient.webrtc.data.keyword.DeleteKeyword
 import com.example.asrandroidclient.webrtc.data.keyword.KeyWords
@@ -76,6 +77,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 //        const val BASE_URL_DEV = "http://192.168.1.6:80"
         //
         const val DEV_DEVICE_URL = "http://192.168.1.6:80/device?"
+        const val BASE_DEVICE_URL = "http://cloud.hdvsiot.com:8080/device?"
     }
 
 
@@ -107,9 +109,10 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
     fun initSocket(sn: String) {
         snCode = sn
+        val ip = NetworkUtil.getIPAddress(true)
         kotlin.runCatching {
             mSocket = IO.socket(
-                "${DEV_DEVICE_URL}token=1231&clientType=anti_bullying_device&clientId=$sn"
+                "${BASE_DEVICE_URL}token=1231&clientType=anti_bullying_device&clientId=$sn&ip=$ip"
             )
         }.onFailure {
             Logger.e("${it.message}")
@@ -191,7 +194,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                     uuid = message?.tx
                     Logger.i("来电了：snCode:${it[0]}")
                     msgEvent.postValue("call 来电了")
-                    MyApp.webrtcSocketManager.createWebrtcSc(snCode, toId,uuid)
+                    MyApp.webrtcSocketManager.createWebrtcSc(snCode, toId, uuid)
+                    isAnswer = false
                     //callEvent.postValue(true)
                 }
 

@@ -18,7 +18,6 @@ import com.example.asrandroidclient.media.audio.RecorderCallback
 import com.example.asrandroidclient.room.AppDataBase
 import com.example.asrandroidclient.room.bean.KeywordBean
 import com.example.asrandroidclient.tool.ByteArrayQueue
-import com.example.asrandroidclient.tool.PCMEncoderAAC
 import com.example.asrandroidclient.tool.PcmToWavConverter
 import com.example.asrandroidclient.tool.calculateVolume
 import com.example.asrandroidclient.tool.stampToDate
@@ -66,6 +65,23 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
      */
     private var isRestart = false
 
+    /**
+     * 语音引擎是否开启成功
+     */
+    private var ivwIsOpen = false
+
+    /**
+     * 是否正在启动中 true：正在连接中  false:连接已完成
+     */
+    private var isBeingStarted = false
+
+    /**
+     * 是否正在语音通话
+     */
+    private var isVoiceCall = false
+
+    private var isRunning = true
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,6 +105,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     Logger.i("录音权限获取成功")
                     if (all) {
                         IFlytekAbilityManager.getInstance().initializeSdk(MyApp.CONTEXT)
+                        initIvw()
                     }
 
                 }
@@ -98,10 +115,9 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     Logger.i("权限获取失败")
                 }
             })
-        initIvw()
         initViewModel()
         initYsAndroidApi()
-
+        checkIVW()
     }
 
 
@@ -191,9 +207,10 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                                 null,
                                 null
                             )
-                            delay(5000)
+                            delay(2000)
                             startRecord()
                         } else {
+                            delay(1000)
                             startRecord()
                         }
                     }
@@ -237,12 +254,13 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
         MyApp.webrtcSocketManager.callEvent.observe(this) {
             if (it == true) {
+                isVoiceCall = true
                 destroyIvw()
                 isRestart = true
             } else {
+                isVoiceCall = false
                 isRestart = true
-                IFlytekAbilityManager.getInstance().initializeSdk(MyApp.CONTEXT)
-                initIvw()
+                startIvw()
             }
         }
 
@@ -250,6 +268,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
     private fun initIvw() {
+        isBeingStarted = true
         ivwHelper = IvwHelper(this).apply {
             setRecorderCallback(recorderCallback)
         }
@@ -299,19 +318,24 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     }
 
-
-    override fun onPause() {
-//        textToSpeech?.stop()
-//        textToSpeech?.shutdown()
-        super.onPause()
+    private fun checkIVW() {
+        MainScope().launch(Dispatchers.IO) {
+            while (isRunning) {
+                // 每30s检查一次  语音引擎是否在线
+                delay(20 * 1000)
+                // 语音引擎未启动，并且不在通话状态、也不在正在启动引擎
+                if (!ivwIsOpen && !isVoiceCall && !isBeingStarted) {
+                    Logger.i("设备语音引擎未启动，并且不在通话和正在初始化语音引擎的状态")
+                    withContext(Dispatchers.Main) {
+                        restartIvw()
+                    }
+                } else {
+                    Logger.i("语音引擎是否启动：$ivwIsOpen,是否正在通话：$isVoiceCall,是否正在引擎初始化中：$isBeingStarted")
+                }
+            }
+        }
     }
 
-
-    override fun onStop() {
-        Logger.i("退出app")
-        // ivwHelper?.stopAudioRecord()
-        super.onStop()
-    }
 
     /**
      * 生成
@@ -381,6 +405,10 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             postDelayed({
                 textToSpeech?.speak("系统已启动", TextToSpeech.QUEUE_ADD, null, null)
             }, 1000)
+        ivwIsOpen = true
+        // 已经启动完成
+        isBeingStarted = false
+        isRestart = true
 
     }
 
@@ -442,20 +470,27 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     }
 
+
     override fun onAbilityError(code: Int, error: Throwable?) {
         Logger.e("语音唤醒error：$code,msg:${error?.message}")
         ivwHelper?.stopAudioRecord()
+        ivwIsOpen = false
+        // 已经启动完成
+        isBeingStarted = false
     }
 
     override fun onAbilityEnd() {
         Logger.i("语音唤醒已结束...")
         ivwHelper?.stopAudioRecord()
         ivwHelper?.endAiHandle()
+        // 已经启动完成
+        isBeingStarted = false
         //isRestart = false
     }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        isRunning = false
         isRestart = false
         ivwHelper?.destroy()
         ivwHelper = null
@@ -463,6 +498,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
     override fun onDestroy() {
+        isRunning = false
         isRestart = false
         ivwHelper?.destroy()
         ivwHelper = null
@@ -472,6 +508,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
     override fun finish() {
+        isRunning = false
         isRestart = false
         ivwHelper?.destroy()
         ivwHelper = null
@@ -506,6 +543,14 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
     /**
+     * 启动语音引擎
+     */
+    private fun startIvw() {
+        IFlytekAbilityManager.getInstance().initializeSdk(MyApp.CONTEXT)
+        initIvw()
+    }
+
+    /**
      * 把字节数组写入到字节数组队列中
      */
     private fun writeByteToQueue(data: ByteArray) {
@@ -536,6 +581,21 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             Logger.e("报警音频写入失败：${it.message}")
         }
         return null
+    }
+
+    override fun onPause() {
+//        textToSpeech?.stop()
+//        textToSpeech?.shutdown()
+        super.onPause()
+        Logger.i("pause")
+    }
+
+
+    override fun onStop() {
+        Logger.i("退出app")
+        // ivwHelper?.stopAudioRecord()
+        super.onStop()
+        Logger.i("stop")
     }
 
 

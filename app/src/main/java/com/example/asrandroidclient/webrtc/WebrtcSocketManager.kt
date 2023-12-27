@@ -2,6 +2,7 @@ package com.example.asrandroidclient.webrtc
 
 import android.annotation.SuppressLint
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.asrandroidclient.MyApp
 import com.google.gson.Gson
 import com.kunminx.architecture.ui.callback.UnPeekLiveData
@@ -10,6 +11,9 @@ import com.sjb.base.base.BaseViewModel
 import io.socket.client.Ack
 import io.socket.client.IO
 import io.socket.client.Socket
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 import java.util.UUID
@@ -20,6 +24,8 @@ import java.util.UUID
  */
 // webrtc 需要使用的socket.io 连接
 const val DEV_WEBRTC_URL = "http://192.168.1.6:80/webrtc?"
+const val BASE_WEBRTC_URL = "http://cloud.hdvsiot.com:8080/webrtc?"
+var isAnswer = false
 
 class WebrtcSocketManager : BaseViewModel() {
     private var snCode: String? = null
@@ -33,6 +39,7 @@ class WebrtcSocketManager : BaseViewModel() {
     @SuppressLint("StaticFieldLeak")
     private var webRtcManager: WebRtcManager? = null
 
+
     /**
      * 创建webrtc的通道
      */
@@ -40,7 +47,9 @@ class WebrtcSocketManager : BaseViewModel() {
         if (webrtcSocket == null) {
             this.snCode = snCode
             this.toId = toId
-            val url = "${DEV_WEBRTC_URL}token=1231&clientType=anti_bullying_device&clientId=$snCode"
+            this.uuid = uuid
+            val url =
+                "${BASE_WEBRTC_URL}token=1231&clientType=anti_bullying_device&clientId=$snCode"
             kotlin.runCatching {
                 webrtcSocket = IO.socket(
                     url
@@ -53,6 +62,13 @@ class WebrtcSocketManager : BaseViewModel() {
             Logger.i("创建webrtc的socket.io链接:$url")
         }
         receiveWebrtcMsg()
+        viewModelScope.launch(Dispatchers.IO) {
+            delay(30 * 1000)
+            if (!isAnswer) {
+                sendHangUp()
+                release()
+            }
+        }
     }
 
 
@@ -74,7 +90,7 @@ class WebrtcSocketManager : BaseViewModel() {
 
 
     fun icecandidate(iceCandidate: IceCandidate) {
-        val message = Message("icecandidate", snCode, toId, Gson().toJson(iceCandidate),uuid)
+        val message = Message("icecandidate", snCode, toId, Gson().toJson(iceCandidate), uuid)
         webrtcSocket?.emit("message", Gson().toJson(message), Ack { ack ->
             if (ack?.isEmpty() == true) {
                 Logger.i("ack为空")
@@ -86,7 +102,7 @@ class WebrtcSocketManager : BaseViewModel() {
     }
 
     fun sendOffer(offer: SessionDescription) {
-        val message = Message("offer", snCode, toId, offer.description,uuid)
+        val message = Message("offer", snCode, toId, offer.description, uuid)
         webrtcSocket?.emit("message", Gson().toJson(message), Ack { ack ->
             if (ack?.isEmpty() == true) {
                 Logger.i("ack为空")
@@ -97,7 +113,7 @@ class WebrtcSocketManager : BaseViewModel() {
     }
 
     fun sendAnswer(answer: SessionDescription) {
-        val message = Message("answer", snCode, toId, answer.description,uuid)
+        val message = Message("answer", snCode, toId, answer.description, uuid)
         webrtcSocket?.emit("message", Gson().toJson(message), Ack { ack ->
             if (ack?.isEmpty() == true) {
                 Logger.i("ack为空")
@@ -108,18 +124,30 @@ class WebrtcSocketManager : BaseViewModel() {
         })
     }
 
-    //    fun sendHangUp() {
-//        val message = Message("hangUp", snCode, toId, null)
-//        mSocket?.emit("message", Gson().toJson(message), Ack { ack ->
-//            if (ack?.isEmpty() == true) {
-//                Logger.i("ack为空")
-//            } else {
-//                Logger.i("接收ack:${ack[0].toString()}")
-//            }
-//
-//        })
-//        webRtcManager?.release()
-//    }
+    fun sendHangUp() {
+        val message = Message("hangup", snCode, toId, null, uuid)
+        webrtcSocket?.emit("message", Gson().toJson(message), Ack { ack ->
+            if (ack?.isEmpty() == true) {
+                Logger.i("ack为空")
+            } else {
+                Logger.i("接收ack:${ack[0].toString()}")
+            }
+
+        })
+        release()
+    }
+
+
+    private fun release() {
+        webRtcManager?.release()
+        webRtcManager = null
+        webrtcSocket?.disconnect()
+        webrtcSocket = null
+        callEvent.postValue(false)
+        snCode = null
+        toId = null
+    }
+
     private fun receiveWebrtcMsg() {
         webrtcSocket?.on("message") {
             for (a in it) {
@@ -155,6 +183,7 @@ class WebrtcSocketManager : BaseViewModel() {
                     webRtcManager?.setRemoteDescription(sdp)
 //                    sendAnswer(sdp)
                     webRtcManager?.createAnswer()
+                    isAnswer = true
                 }
 
                 "answer" -> {
@@ -166,14 +195,8 @@ class WebrtcSocketManager : BaseViewModel() {
                     webRtcManager?.setRemoteDescription(sdp)
                 }
 
-                "hangUp" -> {
-                    webRtcManager?.release()
-                    webRtcManager = null
-                    webrtcSocket?.disconnect()
-                    webrtcSocket = null
-                    callEvent.postValue(false)
-                    snCode = null
-                    toId = null
+                "hangup" -> {
+                    release()
                     Logger.i("语音挂断，释放socket和release webrtc")
                 }
 
@@ -181,6 +204,7 @@ class WebrtcSocketManager : BaseViewModel() {
                     Logger.d("ice:${message.data}")
                     val ice = Gson().fromJson(message.data.toString(), IceCandidate::class.java)
                     webRtcManager?.addIce(ice)
+                    isAnswer = true
                 }
 
             }
