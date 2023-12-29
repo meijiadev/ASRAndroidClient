@@ -8,6 +8,7 @@ import android.speech.tts.TextToSpeech
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.azhon.appupdate.manager.DownloadManager
 import com.example.asrandroidclient.ability.AbilityCallback
 import com.example.asrandroidclient.ability.AbilityConstant
 import com.example.asrandroidclient.ability.IFlytekAbilityManager
@@ -123,6 +124,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         initYsAndroidApi()
         checkIVW()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager?
+        //showVolumeDb()
     }
 
 
@@ -193,7 +195,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             // 打开网络adb连接
             myManager.setNetworkAdb(true)
             // 设置守护进程 0:30s  1：60s   2:180s
-            myManager.daemon("com.sjb.securitydoormanager", 0)
+            myManager.daemon("com.example.asrandroidclient", 2)
             initSocket()
         }
     }
@@ -206,12 +208,13 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     Logger.i("授权信息：${AbilityConstant.IVW_ID.abilityAuthStatus()}")
                     MainScope().launch {
                         if (!isRestart) {
-                            textToSpeech?.speak(
-                                "设备正在自检中",
-                                TextToSpeech.QUEUE_ADD,
-                                null,
-                                null
-                            )
+                            Logger.i("设备正在自检中....")
+//                            textToSpeech?.speak(
+//                                "设备正在自检中",
+//                                TextToSpeech.QUEUE_ADD,
+//                                null,
+//                                null
+//                            )
                             delay(2000)
                             startRecord()
                         } else {
@@ -276,6 +279,22 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             }
         }
 
+        MyApp.socketEventViewModel.appUpdateEvent.observe(this) {
+            it?.let { app ->
+                if (app.versionCode > BuildConfig.VERSION_CODE) {
+                    val manager = DownloadManager.Builder(this).run {
+                        apkUrl(app.fileUrl)
+                        apkName(app.fileName)
+                        smallIcon(R.mipmap.ic_launcher)
+                        build()
+                    }
+                    manager.download()
+                } else {
+                    Logger.i("服务器最新版本和本地版本一致")
+                }
+
+            }
+        }
 
     }
 
@@ -299,7 +318,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             textToSpeech?.setPitch(1.0f)
             textToSpeech?.setSpeechRate(1.0f)
         }
-
+        Logger.i("语音播报引擎初始化：$p0")
     }
 
     /**
@@ -393,15 +412,12 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         override fun onRecordProgress(data: ByteArray, sampleSize: Int, volume: Int) {
             writeByteToQueue(data)
             calculateVolume = data.calculateVolume()
-            //  Logger.d("当前分贝:$calculateVolume")
-            if (calculateVolume > 60) {
-                Logger.i("禁止喧哗吵闹")
-                textToSpeech?.speak(
-                    "禁止喧哗吵闹",
-                    TextToSpeech.QUEUE_ADD,
-                    null,
-                    null
-                )
+            if (calculateVolume > 70) {
+                Logger.i("当前分贝:$calculateVolume")
+            } else if (calculateVolume > 80) {
+                Logger.i("当前分贝:$calculateVolume")
+            } else if (calculateVolume > 90) {
+                Logger.i("当前分贝:$calculateVolume")
             }
 
         }
@@ -410,13 +426,23 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         }
 
     }
+    private var maxDb: Int = 0
+    private fun showVolumeDb() {
+        MainScope().launch(Dispatchers.IO) {
+            while (isRunning) {
+                delay(200)
+                maxDb = if (calculateVolume > maxDb) calculateVolume else maxDb
+                Logger.d("当前声音分贝：$calculateVolume,目前最大值：$maxDb")
+            }
+        }
+    }
 
     override fun onAbilityBegin() {
         Logger.i("语音唤醒正在开始中...")
-        if (!isRestart)
-            postDelayed({
-                textToSpeech?.speak("系统已启动", TextToSpeech.QUEUE_ADD, null, null)
-            }, 1000)
+//        if (!isRestart)
+//            postDelayed({
+//                textToSpeech?.speak("系统已启动", TextToSpeech.QUEUE_ADD, null, null)
+//            }, 1000)
         ivwIsOpen = true
         // 已经启动完成
         isBeingStarted = false

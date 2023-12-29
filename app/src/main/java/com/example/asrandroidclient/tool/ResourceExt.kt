@@ -2,6 +2,9 @@ package com.example.asrandroidclient.tool
 
 import android.content.Context
 import android.widget.Toast
+import kotlin.math.log10
+import kotlin.math.sqrt
+
 /**
  * @Desc:
  * @Author leon
@@ -28,10 +31,10 @@ fun ByteArray.calculateVolume(): Int {
         if (temp >= 0x8000) {
             temp = 0xffff - temp
         }
-        sumVolume += Math.abs(temp).toDouble()
+        sumVolume += temp*temp
         i += 2
     }
-    avgVolume = sumVolume / this.size / 2
-    volume = (Math.log10(1 + avgVolume) * 10).toInt()
+    avgVolume = sqrt(sumVolume / this.size)
+    volume = (log10(avgVolume) * 20).toInt()
     return volume
 }

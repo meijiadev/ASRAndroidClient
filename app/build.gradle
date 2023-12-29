@@ -54,6 +54,26 @@ android {
     buildFeatures {
         viewBinding true
     }
+    signingConfigs {
+        release {
+            keyAlias 'asr'
+            keyPassword 'qwer1234'
+            storeFile file('F:/AndroidProject1/ASRAndroidClient/asrandroid.jks')
+            storePassword 'qwer1234'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+        debug {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
 }
 
 dependencies {
@@ -103,7 +123,8 @@ dependencies {
 
 //    implementation 'org.jetbrains.kotlinx:ktor-client-android:1.5.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
-
+    // 应用更新
+    implementation 'io.github.azhon:appupdate:4.3.2'
     //极速版 (预计占用 4M 左右空间)，主要移除了一些不常用的编解码器
     //implementation 'com.github.microshow:RxFFmpeg:4.9.0-lite'
 }

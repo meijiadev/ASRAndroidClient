@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.asrandroidclient.HandlerAction
 import com.example.asrandroidclient.LATEST_TIME_KEY
 import com.example.asrandroidclient.MyApp
+import com.example.asrandroidclient.data.UpdateAppData
 import com.example.asrandroidclient.data.UploadFileResult
 import com.example.asrandroidclient.room.AppDataBase
 import com.example.asrandroidclient.room.bean.KeywordBean
@@ -41,6 +42,7 @@ import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 import java.io.File
 import java.io.IOException
+import java.net.URI
 
 class SocketEventViewModel : ViewModel(), HandlerAction {
 
@@ -56,6 +58,9 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     var keywordUpdateEvent = UnPeekLiveData<Int>()
 
     var voiceUpdateEvent = UnPeekLiveData<Int>()
+
+    // app 更新相关内容
+    var appUpdateEvent = UnPeekLiveData<UpdateAppData>()
 
     private var isConnected = false
 
@@ -110,9 +115,16 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     fun initSocket(sn: String) {
         snCode = sn
         val ip = NetworkUtil.getIPAddress(true)
+        val url = "${BASE_DEVICE_URL}token=1231&clientType=anti_bullying_device&clientId=$sn&ip=$ip"
+        val uri = URI.create(url)
+        val websocket = arrayOf("websocket")
+        val options = IO.Options.builder()
+            .setReconnectionDelay(3000)
+            .setTransports(websocket)
+            .build()
         kotlin.runCatching {
             mSocket = IO.socket(
-                "${BASE_DEVICE_URL}token=1231&clientType=anti_bullying_device&clientId=$sn&ip=$ip"
+                uri, options
             )
         }.onFailure {
             Logger.e("${it.message}")
@@ -121,7 +133,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         receiveMessage()
         // webRtcManager = WebRtcManager(MyApp.CONTEXT)
         // this.from = sn
-        Logger.i("初始化socket:${mSocket?.isActive}")
+        Logger.i("初始化socket:${mSocket?.isActive},url:$url")
     }
 
 
@@ -390,6 +402,19 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
             }
 
         }
+        // 监听是否有最新版本app
+        mSocket?.on("latestVersion") {
+            val sn = it[0].toString()
+            if (it.size > 1) {
+                kotlin.runCatching {
+                    val jsonStr = it[1].toString()
+                    val appUpdate = Gson().fromJson(jsonStr, UpdateAppData::class.java)
+                    appUpdateEvent.postValue(appUpdate)
+                }.onFailure {
+                    Logger.e("获取更新信息失败：${it.message}")
+                }
+            }
+        }
 
 
         mSocket?.on(Socket.EVENT_CONNECT) {
@@ -400,7 +425,9 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         }
 
         mSocket?.on(Socket.EVENT_CONNECT_ERROR) {
-            Logger.e("socket.io 连接错误：${it[0]}")
+            for (a in it) {
+                Logger.i("socket.io 连接错误：${a.toString()}")
+            }
             isConnected = false
         }
 
@@ -445,3 +472,4 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     }
 
 }
+
