@@ -195,7 +195,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             // 打开网络adb连接
             myManager.setNetworkAdb(true)
             // 设置守护进程 0:30s  1：60s   2:180s
-            myManager.daemon("com.example.asrandroidclient", 2)
+            myManager.daemon("com.example.asrandroidclient", 1)
             initSocket()
         }
     }
@@ -209,12 +209,12 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     MainScope().launch {
                         if (!isRestart) {
                             Logger.i("设备正在自检中....")
-//                            textToSpeech?.speak(
-//                                "设备正在自检中",
-//                                TextToSpeech.QUEUE_ADD,
-//                                null,
-//                                null
-//                            )
+                            textToSpeech?.speak(
+                                "设备正在自检中",
+                                TextToSpeech.QUEUE_ADD,
+                                null,
+                                null
+                            )
                             delay(2000)
                             startRecord()
                         } else {
@@ -282,6 +282,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         MyApp.socketEventViewModel.appUpdateEvent.observe(this) {
             it?.let { app ->
                 if (app.versionCode > BuildConfig.VERSION_CODE) {
+                    textToSpeech?.speak("正在更新系统", TextToSpeech.QUEUE_ADD, null, null)
                     val manager = DownloadManager.Builder(this).run {
                         apkUrl(app.fileUrl)
                         apkName(app.fileName)
@@ -412,12 +413,12 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         override fun onRecordProgress(data: ByteArray, sampleSize: Int, volume: Int) {
             writeByteToQueue(data)
             calculateVolume = data.calculateVolume()
-            if (calculateVolume > 70) {
-                Logger.i("当前分贝:$calculateVolume")
-            } else if (calculateVolume > 80) {
-                Logger.i("当前分贝:$calculateVolume")
+            if (calculateVolume > 80) {
+                Logger.d("当前分贝:$calculateVolume")
             } else if (calculateVolume > 90) {
-                Logger.i("当前分贝:$calculateVolume")
+                Logger.d("当前分贝:$calculateVolume")
+            } else if (calculateVolume > 100) {
+                Logger.d("当前分贝:$calculateVolume")
             }
 
         }
@@ -432,17 +433,17 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             while (isRunning) {
                 delay(200)
                 maxDb = if (calculateVolume > maxDb) calculateVolume else maxDb
-                Logger.d("当前声音分贝：$calculateVolume,目前最大值：$maxDb")
+               // Logger.d("当前声音分贝：$calculateVolume,目前最大值：$maxDb")
             }
         }
     }
 
     override fun onAbilityBegin() {
         Logger.i("语音唤醒正在开始中...")
-//        if (!isRestart)
-//            postDelayed({
-//                textToSpeech?.speak("系统已启动", TextToSpeech.QUEUE_ADD, null, null)
-//            }, 1000)
+        if (!isRestart)
+            postDelayed({
+                textToSpeech?.speak("系统已启动", TextToSpeech.QUEUE_ADD, null, null)
+            }, 1000)
         ivwIsOpen = true
         // 已经启动完成
         isBeingStarted = false

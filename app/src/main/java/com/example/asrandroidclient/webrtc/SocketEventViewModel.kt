@@ -410,6 +410,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                     val jsonStr = it[1].toString()
                     val appUpdate = Gson().fromJson(jsonStr, UpdateAppData::class.java)
                     appUpdateEvent.postValue(appUpdate)
+                    Logger.i("获取更新的信息：$jsonStr")
                 }.onFailure {
                     Logger.e("获取更新信息失败：${it.message}")
                 }
