@@ -29,7 +29,7 @@ class ByteArrayQueue {
     fun popAll(): ByteArray {
         // 数组复制
         val re = elements.copyOf()
-        clear()
+        // clear()
         return re
     }
 

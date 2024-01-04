@@ -115,7 +115,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     fun initSocket(sn: String) {
         snCode = sn
         val ip = NetworkUtil.getIPAddress(true)
-        val url = "${BASE_DEVICE_URL}token=1231&clientType=anti_bullying_device&clientId=$sn&ip=$ip"
+        val url = "${DEV_DEVICE_URL}token=1231&clientType=anti_bullying_device&clientId=$sn&ip=$ip"
         val uri = URI.create(url)
         val websocket = arrayOf("websocket")
         val options = IO.Options.builder()

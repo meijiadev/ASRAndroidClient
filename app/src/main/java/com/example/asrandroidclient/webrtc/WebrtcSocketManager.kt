@@ -49,7 +49,7 @@ class WebrtcSocketManager : BaseViewModel() {
             this.toId = toId
             this.uuid = uuid
             val url =
-                "${BASE_WEBRTC_URL}token=1231&clientType=anti_bullying_device&clientId=$snCode"
+                "${DEV_WEBRTC_URL}token=1231&clientType=anti_bullying_device&clientId=$snCode"
             kotlin.runCatching {
                 webrtcSocket = IO.socket(
                     url

@@ -433,7 +433,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             while (isRunning) {
                 delay(200)
                 maxDb = if (calculateVolume > maxDb) calculateVolume else maxDb
-               // Logger.d("当前声音分贝：$calculateVolume,目前最大值：$maxDb")
+                // Logger.d("当前声音分贝：$calculateVolume,目前最大值：$maxDb")
             }
         }
     }
