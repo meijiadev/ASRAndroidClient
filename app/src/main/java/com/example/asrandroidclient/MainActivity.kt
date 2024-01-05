@@ -24,6 +24,7 @@ import com.example.asrandroidclient.tool.ByteArrayQueue
 import com.example.asrandroidclient.tool.PcmToWavConverter
 import com.example.asrandroidclient.tool.calculateVolume
 import com.example.asrandroidclient.tool.stampToDate
+import com.example.asrandroidclient.webrtc.SocketEventViewModel
 import com.google.gson.Gson
 import com.hjq.permissions.OnPermissionCallback
 import com.hjq.permissions.Permission
@@ -87,6 +88,11 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     private var isRunning = true
 
     private var audioManager: AudioManager? = null
+
+    private var isMicOnline = true        //检查麦克风是否在线
+    private var onLineDbCount = 0
+    //private var offlineDb = 0
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -281,7 +287,10 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
         MyApp.socketEventViewModel.appUpdateEvent.observe(this) {
             it?.let { app ->
-                if (app.versionCode > BuildConfig.VERSION_CODE) {
+                if (isUpdate) {
+                    return@let
+                }
+              //  if (app.versionCode > BuildConfig.VERSION_CODE) {
                     textToSpeech?.speak("正在更新系统", TextToSpeech.QUEUE_ADD, null, null)
                     val manager = DownloadManager.Builder(this).run {
                         apkUrl(app.fileUrl)
@@ -290,14 +299,18 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                         build()
                     }
                     manager.download()
-                } else {
+                    MyApp.socketEventViewModel.uploadState("4", "正在更新中")
+                    isUpdate = true
+            //    } else {
                     Logger.i("服务器最新版本和本地版本一致")
-                }
+             //   }
 
             }
         }
 
     }
+
+    private var isUpdate = false
 
     private fun initIvw() {
         isBeingStarted = true
@@ -361,7 +374,9 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     withContext(Dispatchers.Main) {
                         restartIvw()
                     }
+                    // MyApp.socketEventViewModel.uploadState("3", "设备故障")
                 } else {
+                    //  MyApp.socketEventViewModel.uploadState("2", "故障解除")
                     Logger.d("语音引擎是否启动：$ivwIsOpen,是否正在通话：$isVoiceCall,是否正在引擎初始化中：$isBeingStarted")
                 }
             }
@@ -413,12 +428,32 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         override fun onRecordProgress(data: ByteArray, sampleSize: Int, volume: Int) {
             writeByteToQueue(data)
             calculateVolume = data.calculateVolume()
+            //Logger.d("当前分贝：$calculateVolume")
             if (calculateVolume > 80) {
                 Logger.d("当前分贝:$calculateVolume")
             } else if (calculateVolume > 90) {
                 Logger.d("当前分贝:$calculateVolume")
             } else if (calculateVolume > 100) {
                 Logger.d("当前分贝:$calculateVolume")
+            }
+            if (calculateVolume < 10) {
+                onLineDbCount = 0
+                //   Logger.i("当前分贝小于30：$calculateVolume")
+                if (isMicOnline) {
+                    MyApp.socketEventViewModel.uploadState("3", "拾音器故障")
+                }
+                isMicOnline = false
+            }
+            if (calculateVolume > 35) {
+                onLineDbCount++
+                if (onLineDbCount > 10) {
+                    //   Logger.i("当前大于35分贝：$calculateVolume")
+                    onLineDbCount = 0
+                    if (!isMicOnline) {
+                        isMicOnline = true
+                        MyApp.socketEventViewModel.uploadState("2", "故障已解除")
+                    }
+                }
             }
 
         }

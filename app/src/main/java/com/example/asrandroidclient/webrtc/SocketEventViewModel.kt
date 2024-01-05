@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.asrandroidclient.HandlerAction
 import com.example.asrandroidclient.LATEST_TIME_KEY
 import com.example.asrandroidclient.MyApp
+import com.example.asrandroidclient.data.DeviceState
 import com.example.asrandroidclient.data.UpdateAppData
 import com.example.asrandroidclient.data.UploadFileResult
 import com.example.asrandroidclient.room.AppDataBase
@@ -80,7 +81,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         //http://192.168.1.6:80/device?
         private const val BASE_URL = "http://cloud.hdvsiot.com:8080/"
         private const val DEV_BASE_URL = "http://192.168.1.6:80/"
-        private const val isDevVersion = true
+        private const val isDevVersion = false
         fun getHostUrl(): String {
             return if (isDevVersion) {
                 DEV_BASE_URL
@@ -140,6 +141,13 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         // webRtcManager = WebRtcManager(MyApp.CONTEXT)
         // this.from = sn
         Logger.i("初始化socket:${mSocket?.isActive},url:$url")
+    }
+
+    // 1:离线 2：在线 3：故障 4:升级中
+    fun uploadState(state: String, stateMsg: String) {
+        val msgState = Gson().toJson(DeviceState(null, null, state, stateMsg))
+        mSocket?.emit("stateMessage", snCode, msgState)
+        Logger.i("上报设备故障消息：$msgState")
     }
 
 
