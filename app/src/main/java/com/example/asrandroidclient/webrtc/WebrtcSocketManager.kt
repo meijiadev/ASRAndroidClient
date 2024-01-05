@@ -22,9 +22,6 @@ import java.util.UUID
  * Create by MJ on 2023/12/25.
  * Describe :
  */
-// webrtc 需要使用的socket.io 连接
-const val DEV_WEBRTC_URL = "http://192.168.1.6:80/webrtc?"
-const val BASE_WEBRTC_URL = "http://cloud.hdvsiot.com:8080/webrtc?"
 var isAnswer = false
 
 class WebrtcSocketManager : BaseViewModel() {
@@ -49,7 +46,7 @@ class WebrtcSocketManager : BaseViewModel() {
             this.toId = toId
             this.uuid = uuid
             val url =
-                "${DEV_WEBRTC_URL}token=1231&clientType=anti_bullying_device&clientId=$snCode"
+                "${SocketEventViewModel.getHostUrl()}webrtc?token=1231&clientType=anti_bullying_device&clientId=$snCode"
             kotlin.runCatching {
                 webrtcSocket = IO.socket(
                     url

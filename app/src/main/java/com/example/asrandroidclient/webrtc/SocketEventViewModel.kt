@@ -78,11 +78,16 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
         // http://192.168.1.6:80/webrtc?
         //http://192.168.1.6:80/device?
-//        const val BASE_URL = "http://cloud.zyq0407.com:8080"
-//        const val BASE_URL_DEV = "http://192.168.1.6:80"
-        //
-        const val DEV_DEVICE_URL = "http://192.168.1.6:80/device?"
-        const val BASE_DEVICE_URL = "http://cloud.hdvsiot.com:8080/device?"
+        private const val BASE_URL = "http://cloud.hdvsiot.com:8080/"
+        private const val DEV_BASE_URL = "http://192.168.1.6:80/"
+        private const val isDevVersion = true
+        fun getHostUrl(): String {
+            return if (isDevVersion) {
+                DEV_BASE_URL
+            } else {
+                BASE_URL
+            }
+        }
     }
 
 
@@ -115,7 +120,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     fun initSocket(sn: String) {
         snCode = sn
         val ip = NetworkUtil.getIPAddress(true)
-        val url = "${DEV_DEVICE_URL}token=1231&clientType=anti_bullying_device&clientId=$sn&ip=$ip"
+        val url =
+            "${getHostUrl()}device?token=1231&clientType=anti_bullying_device&clientId=$sn&ip=$ip"
         val uri = URI.create(url)
         val websocket = arrayOf("websocket")
         val options = IO.Options.builder()
