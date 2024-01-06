@@ -8,6 +8,7 @@ import android.speech.tts.TextToSpeech
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.azhon.appupdate.listener.OnDownloadListenerAdapter
 import com.azhon.appupdate.manager.DownloadManager
 import com.example.asrandroidclient.ability.AbilityCallback
 import com.example.asrandroidclient.ability.AbilityConstant
@@ -290,24 +291,39 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 if (isUpdate) {
                     return@let
                 }
-              //  if (app.versionCode > BuildConfig.VERSION_CODE) {
-                    textToSpeech?.speak("正在更新系统", TextToSpeech.QUEUE_ADD, null, null)
-                    val manager = DownloadManager.Builder(this).run {
-                        apkUrl(app.fileUrl)
-                        apkName(app.fileName)
-                        smallIcon(R.mipmap.ic_launcher)
-                        build()
-                    }
-                    manager.download()
-                    MyApp.socketEventViewModel.uploadState("4", "正在更新中")
-                    isUpdate = true
-            //    } else {
-                    Logger.i("服务器最新版本和本地版本一致")
-             //   }
+                //  if (app.versionCode > BuildConfig.VERSION_CODE) {
+                textToSpeech?.speak("正在更新系统", TextToSpeech.QUEUE_ADD, null, null)
+                val manager = DownloadManager.Builder(this).run {
+                    apkUrl(app.fileUrl)
+                    apkName(app.fileName)
+                    smallIcon(R.mipmap.ic_launcher)
+                    onDownloadListener(listenerAdapter)
+                    build()
+                }
+                manager.download()
+                MyApp.socketEventViewModel.uploadState("4", "正在更新中")
+                isUpdate = true
+                //    } else {
+                Logger.i("服务器最新版本和本地版本一致")
+                //   }
 
             }
         }
 
+    }
+
+    private var curProgress: Int = 0
+    private val listenerAdapter: OnDownloadListenerAdapter = object : OnDownloadListenerAdapter() {
+
+        override fun downloading(max: Int, progress: Int) {
+            val curr = (progress / max.toDouble() * 100.0).toInt()
+            Logger.i("当前下载进度：$curr")
+            if (curr != curProgress) {
+                curProgress = curr
+                MyApp.socketEventViewModel.uploadState("4", "正在更新中", curProgress.toString())
+            }
+            //updateAppDialog?.setProgress(curr)
+        }
     }
 
     private var isUpdate = false

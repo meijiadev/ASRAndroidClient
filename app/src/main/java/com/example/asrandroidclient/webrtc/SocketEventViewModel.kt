@@ -1,9 +1,11 @@
 package com.example.asrandroidclient.webrtc
 
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.asrandroidclient.BuildConfig
 import com.example.asrandroidclient.HandlerAction
 import com.example.asrandroidclient.LATEST_TIME_KEY
 import com.example.asrandroidclient.MyApp
@@ -81,7 +83,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         //http://192.168.1.6:80/device?
         private const val BASE_URL = "http://cloud.hdvsiot.com:8080/"
         private const val DEV_BASE_URL = "http://192.168.1.6:80/"
-        private const val isDevVersion = false
+        private const val isDevVersion = true
         fun getHostUrl(): String {
             return if (isDevVersion) {
                 DEV_BASE_URL
@@ -144,8 +146,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     }
 
     // 1:离线 2：在线 3：故障 4:升级中
-    fun uploadState(state: String, stateMsg: String) {
-        val msgState = Gson().toJson(DeviceState(null, null, state, stateMsg))
+    fun uploadState(state: String, stateMsg: String, progress: String? = null) {
+        val msgState = Gson().toJson(DeviceState(null, null, state, stateMsg, progress))
         mSocket?.emit("stateMessage", snCode, msgState)
         Logger.i("上报设备故障消息：$msgState")
     }
@@ -153,7 +155,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
     fun login() {
         val time = SpManager.getString(LATEST_TIME_KEY, "1975-01-01 14:04:17")
-        mSocket?.emit("register", snCode, time)
+        mSocket?.emit("register", snCode, BuildConfig.VERSION_NAME, time)
         Logger.i("login:$snCode,time:$time")
         //getUploadFileUrl()
     }

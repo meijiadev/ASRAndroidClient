@@ -9,5 +9,6 @@ data class DeviceState(
     val model: String?,
     val versionNo: String?,
     val state: String,
-    val stateMsg: String
+    val stateMsg: String,
+    val progress: String? = null
 )
