@@ -44,8 +44,8 @@ class SpManager {
          * @param key 存储时的键
          * @param defaultValue 如果没有获取到数据显示默认字符串
          */
-        fun getString(key: String, defaultValue: String?): String? {
-            return kv.decodeString(key, defaultValue)
+        fun getString(key: String, defaultValue: String): String {
+            return kv.decodeString(key, defaultValue) ?: defaultValue
         }
 
 

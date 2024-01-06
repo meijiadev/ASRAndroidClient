@@ -10,6 +10,7 @@ import com.example.asrandroidclient.HandlerAction
 import com.example.asrandroidclient.LATEST_TIME_KEY
 import com.example.asrandroidclient.MyApp
 import com.example.asrandroidclient.data.DeviceState
+import com.example.asrandroidclient.data.RegisterData
 import com.example.asrandroidclient.data.UpdateAppData
 import com.example.asrandroidclient.data.UploadFileResult
 import com.example.asrandroidclient.room.AppDataBase
@@ -83,7 +84,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         //http://192.168.1.6:80/device?
         private const val BASE_URL = "http://cloud.hdvsiot.com:8080/"
         private const val DEV_BASE_URL = "http://192.168.1.6:80/"
-        private const val isDevVersion = true
+        private const val isDevVersion = false
         fun getHostUrl(): String {
             return if (isDevVersion) {
                 DEV_BASE_URL
@@ -155,7 +156,9 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
     fun login() {
         val time = SpManager.getString(LATEST_TIME_KEY, "1975-01-01 14:04:17")
-        mSocket?.emit("register", snCode, BuildConfig.VERSION_NAME, time)
+        val msgRegister =
+            Gson().toJson(RegisterData(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, time))
+        mSocket?.emit("register", snCode, msgRegister)
         Logger.i("login:$snCode,time:$time")
         //getUploadFileUrl()
     }
@@ -204,7 +207,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
             fileId = fileId.toLong()
         )
         Logger.i("上传报警信息：$keyword,$keywordId,$ncm,$duration")
-        mSocket?.emit("waringMessage", Gson().toJson(dto))
+        mSocket?.emit("waringMessage", snCode, Gson().toJson(dto))
     }
 
 
