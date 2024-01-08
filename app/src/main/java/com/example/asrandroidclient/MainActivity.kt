@@ -92,7 +92,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     private var isMicOnline = true        //检查麦克风是否在线
     private var onLineDbCount = 0
-    //private var offlineDb = 0
+    private var offlineDb = 0
+    private var startRecordTime: Long = 0       // 刚刚开始录音的时间
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -433,7 +434,10 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     private val recorderCallback = object : RecorderCallback {
 
-        override fun onStartRecord() {}
+        override fun onStartRecord() {
+            startRecordTime = System.currentTimeMillis()
+            Logger.i("开始录音")
+        }
 
         override fun onPauseRecord() {
         }
@@ -452,16 +456,24 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             } else if (calculateVolume > 100) {
                 Logger.d("当前分贝:$calculateVolume")
             }
+            //从刚刚开始录音500ms以后开始判断是否拾音器故障
+            if (System.currentTimeMillis() - startRecordTime < 1500) {
+                return
+            }
             if (calculateVolume < 10) {
                 onLineDbCount = 0
-                //   Logger.i("当前分贝小于30：$calculateVolume")
-                if (isMicOnline) {
-                    MyApp.socketEventViewModel.uploadState("3", "拾音器故障")
+                offlineDb++
+                if (offlineDb > 3) {
+                    Logger.i("当前分贝连续3次采集小于20：$calculateVolume")
+                    if (isMicOnline) {
+                        MyApp.socketEventViewModel.uploadState("3", "拾音器故障")
+                    }
+                    isMicOnline = false
                 }
-                isMicOnline = false
             }
             if (calculateVolume > 35) {
                 onLineDbCount++
+                offlineDb = 0
                 if (onLineDbCount > 10) {
                     //   Logger.i("当前大于35分贝：$calculateVolume")
                     onLineDbCount = 0
