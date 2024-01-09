@@ -15,5 +15,6 @@ data class AntiBullyingRecordDTO(
     val type: String? = null, // 关键字 1 or  噪音2
     val orgId: Long? = null, // 可不填
     val fileId: Long? = null, // 上传的报警文件ID
+    val volume: Int? = null     // 声音分贝大小
 )
 // waringMessage

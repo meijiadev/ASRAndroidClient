@@ -1,7 +1,5 @@
 package com.example.asrandroidclient.webrtc
 
-import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,7 +25,6 @@ import com.example.asrandroidclient.webrtc.data.voice.VoiceDatas
 import com.google.gson.Gson
 import com.kunminx.architecture.ui.callback.UnPeekLiveData
 import com.orhanobut.logger.Logger
-import io.socket.client.Ack
 import io.socket.client.IO
 import io.socket.client.Socket
 import kotlinx.coroutines.Dispatchers
@@ -41,12 +38,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.Response
-
-import org.webrtc.IceCandidate
-import org.webrtc.SessionDescription
 import java.io.File
 import java.io.IOException
 import java.net.URI
+import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLSocketFactory
 
 class SocketEventViewModel : ViewModel(), HandlerAction {
 
@@ -120,6 +116,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     // 报警的30s音频文件
     private var alarmFile: File? = null
 
+    private var volumeDb: Int? = null
+
 
     fun initSocket(sn: String) {
         snCode = sn
@@ -129,7 +127,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         val uri = URI.create(url)
         val websocket = arrayOf("websocket")
         val options = IO.Options.builder()
-            .setReconnectionDelay(3000)
+            .setReconnectionDelay(1000)
             .setTransports(websocket)
             .build()
         kotlin.runCatching {
@@ -140,6 +138,13 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
             Logger.e("${it.message}")
         }
         mSocket?.connect()
+        val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .writeTimeout(1, TimeUnit.MINUTES)
+            .readTimeout(1, TimeUnit.MINUTES)
+            .build()
+        IO.setDefaultOkHttpCallFactory(okHttpClient)
+        IO.setDefaultOkHttpWebSocketFactory(okHttpClient)
         receiveMessage()
         // webRtcManager = WebRtcManager(MyApp.CONTEXT)
         // this.from = sn
@@ -173,12 +178,20 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     /**
      * 获取文件上传地址
      */
-    fun getUploadFileUrl(keyword: String, id: Long, ncm: Int, duration: String, alarmFile: File?) {
+    fun getUploadFileUrl(
+        keyword: String,
+        id: Long,
+        ncm: Int,
+        duration: String,
+        alarmFile: File?,
+        db: Int
+    ) {
         this.keyword = keyword
         this.keywordId = id
         this.ncm = ncm
         this.duration = duration
         this.alarmFile = alarmFile
+        this.volumeDb = db
         mSocket?.emit("uploadFileUrlMessage", snCode)
         Logger.i("获取上传文件地址链接命令")
     }
@@ -204,7 +217,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
             credibility = ncm,
             duration = duration,
             type = "1",
-            fileId = fileId.toLong()
+            fileId = fileId.toLong(),
+            volume = volumeDb
         )
         Logger.i("上传报警信息：$keyword,$keywordId,$ncm,$duration")
         mSocket?.emit("waringMessage", snCode, Gson().toJson(dto))
@@ -446,13 +460,15 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
         mSocket?.on(Socket.EVENT_CONNECT_ERROR) {
             for (a in it) {
-                Logger.i("socket.io 连接错误：${a.toString()}")
+                Logger.i("socket.io 连接错误：${a}")
             }
             isConnected = false
         }
 
         mSocket?.on(Socket.EVENT_DISCONNECT) {
-            Logger.i("socket.io 断开连接")
+            for (a in it) {
+                Logger.i("socket.io 断开连接:${a}")
+            }
             isConnected = false
         }
 

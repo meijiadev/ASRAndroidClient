@@ -22,6 +22,7 @@ import com.example.asrandroidclient.media.audio.RecorderCallback
 import com.example.asrandroidclient.room.AppDataBase
 import com.example.asrandroidclient.room.bean.KeywordBean
 import com.example.asrandroidclient.tool.ByteArrayQueue
+import com.example.asrandroidclient.tool.IntArrayQueue
 import com.example.asrandroidclient.tool.PcmToWavConverter
 import com.example.asrandroidclient.tool.calculateVolume
 import com.example.asrandroidclient.tool.stampToDate
@@ -52,7 +53,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     private var ivwHelper: IvwHelper? = null
     private var keyWord: String =
         "救命救命"
-    private var threshold: Int = 900     //范围 0-3000
+    private var threshold: Int = 1000     //范围 0-3000
 
     private var textToSpeech: TextToSpeech? = null
 
@@ -94,6 +95,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     private var onLineDbCount = 0
     private var offlineDb = 0
     private var startRecordTime: Long = 0       // 刚刚开始录音的时间
+
+    private var volumeQueue = IntArrayQueue()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -394,7 +397,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     // MyApp.socketEventViewModel.uploadState("3", "设备故障")
                 } else {
                     //  MyApp.socketEventViewModel.uploadState("2", "故障解除")
-                    Logger.d("语音引擎是否启动：$ivwIsOpen,是否正在通话：$isVoiceCall,是否正在引擎初始化中：$isBeingStarted")
+//                    Logger.d("语音引擎是否启动：$ivwIsOpen,是否正在通话：$isVoiceCall,是否正在引擎初始化中：$isBeingStarted")
                 }
             }
         }
@@ -448,7 +451,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         override fun onRecordProgress(data: ByteArray, sampleSize: Int, volume: Int) {
             writeByteToQueue(data)
             calculateVolume = data.calculateVolume()
-            //Logger.d("当前分贝：$calculateVolume")
+//            Logger.d("当前分贝：$calculateVolume")
             if (calculateVolume > 80) {
                 Logger.d("当前分贝:$calculateVolume")
             } else if (calculateVolume > 90) {
@@ -460,10 +463,10 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             if (System.currentTimeMillis() - startRecordTime < 1500) {
                 return
             }
-            if (calculateVolume < 10) {
+            if (calculateVolume < 40) {
                 onLineDbCount = 0
                 offlineDb++
-                if (offlineDb > 3) {
+                if (offlineDb > 5) {
                     Logger.i("当前分贝连续3次采集小于20：$calculateVolume")
                     if (isMicOnline) {
                         MyApp.socketEventViewModel.uploadState("3", "拾音器故障")
@@ -471,7 +474,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     isMicOnline = false
                 }
             }
-            if (calculateVolume > 35) {
+            if (calculateVolume > 40) {
                 onLineDbCount++
                 offlineDb = 0
                 if (onLineDbCount > 10) {
@@ -481,6 +484,12 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                         isMicOnline = true
                         MyApp.socketEventViewModel.uploadState("2", "故障已解除")
                     }
+                }
+            }
+            volumeQueue.let {
+                it.append(calculateVolume)
+                if (it.size > 15) {
+                    it.pop(it.size - 15)
                 }
             }
 
@@ -515,10 +524,13 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
     override fun onAbilityResult(result: String) {
-        Logger.i("$result，当前声音分贝：$calculateVolume")
+        val volume = analyseVolume()
+        Logger.i("$result，当前声音分贝：$volume")
+        if (volume < 75) {
+            return
+        }
         val rs = result.replace("func_wake_up:", "")
         runCatching {
-
             val speechResult = Gson().fromJson(rs, SpeechResult::class.java)
             val rtl = speechResult.rlt[0]
             MainScope().launch(Dispatchers.IO) {
@@ -530,7 +542,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 val voiceBean = AppDataBase.getInstance().voiceDao().findById(voiceId)
                 speechMsg = voiceBean?.text ?: "请勿打架斗殴"
                 speechMsgTimes = voiceBean?.times ?: 1
-                Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$calculateVolume")
+                Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
                 val alarmFile = writeBytesToFile()
                 val wavPath =
                     FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
@@ -557,7 +569,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                                     keyId,
                                     ncm,
                                     duration,
-                                    File(wavPath)
+                                    File(wavPath),
+                                    volume
                                 )
                             //MyApp.socketEventViewModel.uploadWarnMsg(key, keyId, ncm, duration)
                         }
@@ -570,6 +583,23 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             ivwHelper?.destroy()
         }
 
+    }
+
+    /**
+     * 分析当前15帧数据
+     */
+    private fun analyseVolume(): Int {
+        var count = 0
+        var sum = 0
+        for (a in volumeQueue.getAll()) {
+            if (a > 65) {
+                count++
+                sum += a
+                Logger.i("volume:$a")
+            }
+        }
+        if (count == 0) count = 1
+        return sum / count
     }
 
 
