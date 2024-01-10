@@ -5,6 +5,7 @@ import android.content.Context
 import android.media.AudioManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
+import android.text.method.ScrollingMovementMethod
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -136,6 +137,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         checkIVW()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager?
         //showVolumeDb()
+        msgTV.movementMethod = ScrollingMovementMethod.getInstance()
     }
 
 
@@ -197,6 +199,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                         "设备的系统版本：${myManager.androidVersion} \n " +
                         "当前设备的内存容量：${myManager.runningMemory} \n" +
                         "获取设备的sn码：${myManager.sn}"
+
             )
             if (myManager.firmwareVersion.toInt() < 4) {
                 Logger.i("当前SDK的版本号小于4.0")
@@ -526,9 +529,9 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     override fun onAbilityResult(result: String) {
         val volume = analyseVolume()
         Logger.i("$result，当前声音分贝：$volume")
-        if (volume < 75) {
-            return
-        }
+//        if (volume < 75) {
+//            return
+//        }
         val rs = result.replace("func_wake_up:", "")
         runCatching {
             val speechResult = Gson().fromJson(rs, SpeechResult::class.java)
@@ -572,7 +575,6 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                                     File(wavPath),
                                     volume
                                 )
-                            //MyApp.socketEventViewModel.uploadWarnMsg(key, keyId, ncm, duration)
                         }
                         // }
                     }

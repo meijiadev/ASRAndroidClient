@@ -8,6 +8,7 @@ import com.example.asrandroidclient.file.FileUtil
 import com.iflytek.aikit.core.AiHelper
 import com.iflytek.aikit.core.BaseLibrary
 import com.iflytek.aikit.core.ErrType
+import com.iflytek.aikit.core.LogLvl
 import com.orhanobut.logger.Logger
 import kotlin.concurrent.thread
 
@@ -49,10 +50,12 @@ class IFlytekAbilityManager private constructor() {
             .apiKey(APIKey)
             .apiSecret(APISecret)
             .workDir(path)
-            .iLogMaxCount(1)
+            .logOpen(false)
+            .iLogOpen(false)
             .authInterval(AUTH_INTERVAL)
             .ability(engineIds())
             .build()
+        AiHelper.getInst().setLogInfo(LogLvl.ERROR, 1, "/sdcard/ASRAndroidClient/aikit")
         //鉴权
         AiHelper.getInst().registerListener { type, code ->
             val success = type == ErrType.AUTH && code == 0

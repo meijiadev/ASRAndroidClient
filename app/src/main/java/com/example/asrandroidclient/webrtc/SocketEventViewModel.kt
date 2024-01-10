@@ -80,10 +80,11 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         //http://192.168.1.6:80/device?
         private const val BASE_URL = "http://cloud.hdvsiot.com:8080/"
         private const val DEV_BASE_URL = "http://192.168.1.6:80/"
+        private const val BASE_HTTP_URL_ZYQ = "http://cloud.zyq0407.com:8080/"
         private const val isDevVersion = false
         fun getHostUrl(): String {
             return if (isDevVersion) {
-                DEV_BASE_URL
+                BASE_HTTP_URL_ZYQ
             } else {
                 BASE_URL
             }
@@ -423,7 +424,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
                 }
             }
-            msgEvent.postValue(it[0].toString())
+            //msgEvent.postValue(it[0].toString())
         }
 
 
@@ -463,11 +464,13 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                 Logger.i("socket.io 连接错误：${a}")
             }
             isConnected = false
+            msgEvent.postValue("全局socket.io ..连接错误")
         }
 
         mSocket?.on(Socket.EVENT_DISCONNECT) {
             for (a in it) {
                 Logger.i("socket.io 断开连接:${a}")
+                msgEvent.postValue("socket.io 断开连接")
             }
             isConnected = false
         }

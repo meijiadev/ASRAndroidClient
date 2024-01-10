@@ -41,10 +41,10 @@ class WebrtcSocketManager : BaseViewModel() {
      * 创建webrtc的通道
      */
     fun createWebrtcSc(snCode: String?, toId: String?, uuid: String?) {
+        this.snCode = snCode
+        this.toId = toId
+        this.uuid = uuid
         if (webrtcSocket == null) {
-            this.snCode = snCode
-            this.toId = toId
-            this.uuid = uuid
             val url =
                 "${SocketEventViewModel.getHostUrl()}webrtc?token=1231&clientType=anti_bullying_device&clientId=$snCode"
             kotlin.runCatching {
@@ -55,9 +55,13 @@ class WebrtcSocketManager : BaseViewModel() {
                 Logger.e("${it.message}")
             }
             webrtcSocket?.connect()
-            webRtcManager = WebRtcManager(MyApp.CONTEXT)
             Logger.i("创建webrtc的socket.io链接:$url")
         }
+        if (webRtcManager != null) {
+            releaseWebrtc()
+            sendCalled()
+        }
+        webRtcManager = WebRtcManager(MyApp.CONTEXT)
         receiveWebrtcMsg()
         viewModelScope.launch(Dispatchers.IO) {
             delay(30 * 1000)
@@ -122,6 +126,7 @@ class WebrtcSocketManager : BaseViewModel() {
     }
 
     fun sendHangUp() {
+        Logger.i("sendHangUp")
         val message = Message("hangup", snCode, toId, null, uuid)
         webrtcSocket?.emit("message", Gson().toJson(message), Ack { ack ->
             if (ack?.isEmpty() == true) {
@@ -134,15 +139,24 @@ class WebrtcSocketManager : BaseViewModel() {
         release()
     }
 
-
+    /**
+     * 释放webrtc和socket.io
+     */
     private fun release() {
-        webRtcManager?.release()
-        webRtcManager = null
+        releaseWebrtc()
         webrtcSocket?.disconnect()
         webrtcSocket = null
         callEvent.postValue(false)
         snCode = null
         toId = null
+    }
+
+    /**
+     * 释放webrtc
+     */
+    private fun releaseWebrtc() {
+        webRtcManager?.release()
+        webRtcManager = null
     }
 
     private fun receiveWebrtcMsg() {
