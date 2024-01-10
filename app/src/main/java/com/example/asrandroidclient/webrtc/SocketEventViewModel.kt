@@ -81,7 +81,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         private const val BASE_URL = "http://cloud.hdvsiot.com:8080/"
         private const val DEV_BASE_URL = "http://192.168.1.6:80/"
         private const val BASE_HTTP_URL_ZYQ = "http://cloud.zyq0407.com:8080/"
-        private const val isDevVersion = false
+        private const val isDevVersion = true
         fun getHostUrl(): String {
             return if (isDevVersion) {
                 BASE_HTTP_URL_ZYQ

@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.azhon.appupdate.listener.OnDownloadListenerAdapter
 import com.azhon.appupdate.manager.DownloadManager
+import com.clj.fastble.BleManager
 import com.example.asrandroidclient.ability.AbilityCallback
 import com.example.asrandroidclient.ability.AbilityConstant
 import com.example.asrandroidclient.ability.IFlytekAbilityManager
@@ -112,17 +113,31 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
         }
         textToSpeech = TextToSpeech(MyApp.CONTEXT, this)
+        initPermission()
+        initViewModel()
+        initYsAndroidApi()
+        checkIVW()
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager?
+        //showVolumeDb()
+        msgTV.movementMethod = ScrollingMovementMethod.getInstance()
+    }
+
+    private fun initPermission() {
         XXPermissions.with(this)
             // .permission(Permission.MANAGE_EXTERNAL_STORAGE)
             .permission(Permission.RECORD_AUDIO)
             .permission(Permission.WRITE_EXTERNAL_STORAGE)
             .permission(Permission.READ_EXTERNAL_STORAGE)
+           // .permission(Permission.BLUETOOTH_CONNECT)
+            .permission(Permission.ACCESS_FINE_LOCATION)
+            .permission(Permission.ACCESS_COARSE_LOCATION)
             .request(object : OnPermissionCallback {
                 override fun onGranted(permissions: MutableList<String>?, all: Boolean) {
                     Logger.i("录音权限获取成功")
                     if (all) {
                         IFlytekAbilityManager.getInstance().initializeSdk(MyApp.CONTEXT)
                         initIvw()
+                        initBle()
                     }
 
                 }
@@ -132,32 +147,18 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     Logger.i("权限获取失败")
                 }
             })
-        initViewModel()
-        initYsAndroidApi()
-        checkIVW()
-        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager?
-        //showVolumeDb()
-        msgTV.movementMethod = ScrollingMovementMethod.getInstance()
+
     }
 
+    private fun initBle() {
+        BleManager.getInstance().init(MyApp.app)
+        BleManager.getInstance().enableLog(true)
+        val isSupportBle = BleManager.getInstance().isSupportBle
+        val isBleEnable = BleManager.getInstance().isBlueEnable
 
-    /**
-     * 获取语音播报的文本信息
-     */
-//    private fun initVoice() {
-//        MainScope().launch(Dispatchers.IO) {
-//            val voiceDatas = AppDataBase.getInstance().voiceDao().getAllVoice()
-//            if (voiceDatas != null) {
-//                for (voice in voiceDatas) {
-//                    if (voice.defaultFlag) {
-//                        speechMsg = voice.text
-//                        speechMsgTimes = voice.times
-//                        Logger.i("播报的语音：$speechMsg")
-//                    }
-//                }
-//            }
-//        }
-//    }
+        Logger.i("设备是否支持蓝牙：$isSupportBle,蓝牙是否开启：$isBleEnable")
+    }
+
 
     /**
      * 获取数据库中的keywords表中的数据
@@ -166,15 +167,6 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         return withContext(Dispatchers.IO) {
             AppDataBase.getInstance().keyWordDao().getAllKey()
         }
-    }
-
-
-    fun onCall(v: View) {
-        MainScope().launch(Dispatchers.IO) {
-            //val waring = System.currentTimeMillis()
-
-        }
-
     }
 
 

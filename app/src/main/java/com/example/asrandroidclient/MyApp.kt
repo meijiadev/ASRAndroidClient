@@ -16,6 +16,7 @@ class MyApp : BaseApplication() {
 
     companion object {
         lateinit var CONTEXT: Context
+        lateinit var app: MyApp
         lateinit var mainViewModel: MainViewModel
         lateinit var socketEventViewModel: SocketEventViewModel
         lateinit var webrtcSocketManager: WebrtcSocketManager
@@ -28,6 +29,7 @@ class MyApp : BaseApplication() {
 
     override fun onCreate() {
         super.onCreate()
+        app = this
         CONTEXT = this
         val formatStrategy = PrettyFormatStrategy
             .newBuilder()
