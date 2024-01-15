@@ -212,10 +212,14 @@ class WebrtcSocketManager : BaseViewModel() {
                 }
 
                 "icecandidate" -> {
-                    Logger.d("ice:${message.data}")
-                    val ice = Gson().fromJson(message.data.toString(), IceCandidate::class.java)
-                    webRtcManager?.addIce(ice)
-                    isAnswer = true
+                  kotlin.runCatching {
+                      Logger.d("ice:${message.data}")
+                      val ice = Gson().fromJson(message.data.toString(), IceCandidate::class.java)
+                      webRtcManager?.addIce(ice)
+                      isAnswer = true
+                  }.onFailure {
+                      Logger.e("ice error:${it.message}")
+                  }
                 }
 
             }

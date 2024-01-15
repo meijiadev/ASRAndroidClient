@@ -78,19 +78,20 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
         // http://192.168.1.6:80/webrtc?
         //http://192.168.1.6:80/device?
-        private const val BASE_URL = "http://cloud.hdvsiot.com:8080/"
+        private var BASE_URL = "http://cloud.hdvsiot.com:8080/"
         private const val DEV_BASE_URL = "http://192.168.1.6:80/"
         private const val BASE_HTTP_URL_ZYQ = "http://cloud.zyq0407.com:8080/"
-        private const val isDevVersion = true
+        private const val isDevVersion = false
+        const val HOST_URL_KEY = "host_url_key"
         fun getHostUrl(): String {
             return if (isDevVersion) {
                 BASE_HTTP_URL_ZYQ
             } else {
-                BASE_URL
+                (SpManager.getString(HOST_URL_KEY) ?: BASE_URL)
             }
         }
-    }
 
+    }
 
     //var from: String = "SN012345678902"
     var toId: String = "SN012345678901"
@@ -118,6 +119,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     private var alarmFile: File? = null
 
     private var volumeDb: Int? = null
+
 
 
     fun initSocket(sn: String) {
@@ -151,6 +153,17 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         // this.from = sn
         Logger.i("初始化socket:${mSocket?.isActive},url:$url")
     }
+
+    fun setUrl(url: String) {
+        SpManager.putString(HOST_URL_KEY, url)
+        BASE_URL = url
+        mSocket?.disconnect()
+        mSocket = null
+        if (snCode != null) {
+            initSocket(snCode!!)
+        }
+    }
+
 
     // 1:离线 2：在线 3：故障 4:升级中
     fun uploadState(state: String, stateMsg: String, progress: String? = null) {

@@ -128,9 +128,9 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             .permission(Permission.RECORD_AUDIO)
             .permission(Permission.WRITE_EXTERNAL_STORAGE)
             .permission(Permission.READ_EXTERNAL_STORAGE)
-           // .permission(Permission.BLUETOOTH_CONNECT)
-            .permission(Permission.ACCESS_FINE_LOCATION)
-            .permission(Permission.ACCESS_COARSE_LOCATION)
+            .permission(Permission.BLUETOOTH_ADVERTISE)
+//            .permission(Permission.ACCESS_FINE_LOCATION)
+//            .permission(Permission.ACCESS_COARSE_LOCATION)
             .request(object : OnPermissionCallback {
                 override fun onGranted(permissions: MutableList<String>?, all: Boolean) {
                     Logger.i("录音权限获取成功")
@@ -155,8 +155,11 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         BleManager.getInstance().enableLog(true)
         val isSupportBle = BleManager.getInstance().isSupportBle
         val isBleEnable = BleManager.getInstance().isBlueEnable
-
         Logger.i("设备是否支持蓝牙：$isSupportBle,蓝牙是否开启：$isBleEnable")
+        if (!isBleEnable) {
+            BleManager.getInstance().enableBluetooth()
+        }
+        MyApp.mainViewModel.initBlue()
     }
 
 
@@ -308,6 +311,11 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
             }
         }
+        MyApp.mainViewModel.bleConnectedEvent.observe(this) {
+            if (it) {
+                textToSpeech?.speak("正在进行配网", TextToSpeech.QUEUE_ADD, null, null)
+            }
+        }
 
     }
 
@@ -393,6 +401,9 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 } else {
                     //  MyApp.socketEventViewModel.uploadState("2", "故障解除")
 //                    Logger.d("语音引擎是否启动：$ivwIsOpen,是否正在通话：$isVoiceCall,是否正在引擎初始化中：$isBeingStarted")
+                }
+                if (!BleManager.getInstance().isBlueEnable) {
+                    BleManager.getInstance().enableBluetooth()
                 }
             }
         }
