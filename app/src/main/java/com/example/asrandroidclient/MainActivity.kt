@@ -313,7 +313,24 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         }
         MyApp.mainViewModel.bleConnectedEvent.observe(this) {
             if (it) {
-                textToSpeech?.speak("正在进行配网", TextToSpeech.QUEUE_ADD, null, null)
+                textToSpeech?.speak("连接已建立", TextToSpeech.QUEUE_ADD, null, null)
+
+            }
+        }
+        MyApp.mainViewModel.networkConfigEvent.observe(this) {
+            if (it == 1) {
+                textToSpeech?.speak("正在配网中", TextToSpeech.QUEUE_ADD, null, null)
+                sn?.let { sn ->
+                    MyApp.mainViewModel.sendSnCOde(sn)
+                }
+            } else if (it == 3) {
+                textToSpeech?.speak("配网已完成", TextToSpeech.QUEUE_ADD, null, null)
+                sn?.let { sn ->
+                    MyApp.mainViewModel.sendNetworkFinish(sn)
+                }
+            } else if (it == 4) {
+                textToSpeech?.speak("设备已配置，无需再进行配网", TextToSpeech.QUEUE_ADD, null, null)
+                MyApp.mainViewModel.sendHasRegister()
             }
         }
 

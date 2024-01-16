@@ -10,6 +10,10 @@ import android.os.Handler
 import android.util.Log
 import com.example.asrandroidclient.MyApp
 import com.example.asrandroidclient.tool.ByteArrayQueue
+import com.example.asrandroidclient.webrtc.SocketEventViewModel
+import com.example.asrandroidclient.webrtc.SocketEventViewModel.Companion.BASE_URL
+import com.example.asrandroidclient.webrtc.SocketEventViewModel.Companion.getHostUrl
+import com.example.asrandroidclient.webrtc.SocketEventViewModel.Companion.isRegister
 import com.google.gson.Gson
 import com.orhanobut.logger.Logger
 import java.io.IOException
@@ -25,7 +29,6 @@ class ChatService {
     private var mAcceptThread: AcceptThread? = null
     private var mConnectedThread: ConnectedThread? = null
     private var mState: Int
-    private var byteArrayQueue = ByteArrayQueue()
 
     init {
         mAdapter = BluetoothAdapter.getDefaultAdapter()
@@ -215,11 +218,39 @@ class ChatService {
         Logger.i("接收的信息:${String(buffer, 0, length)}")
         val jsonStr = String(buffer, 0, length)
         val bleData = Gson().fromJson(jsonStr, BleData::class.java)
-        if (bleData.url.contains("http")) {
-            MyApp.socketEventViewModel.setUrl(bleData.url)
+        val url = bleData.url
+        val status = bleData.status
+        val sn = bleData.snCode
+        if (url.contains("http")) {
+            if (status == 1) {
+                if (url != getHostUrl() || !isRegister) {
+                    MyApp.socketEventViewModel.setUrl(url)
+                    MyApp.mainViewModel.run {
+                        configUrl = url
+                        networkConfigEvent.postValue(1)
+                    }
+                    return
+                } else {
+                    // Logger.i("设备已经注册d")
+                    //if (isRegister) {
+                    Logger.i("设备已经被注册到平台")
+                    MyApp.mainViewModel.networkConfigEvent.postValue(4)
+                    //}
+
+                }
+            }
+            if (status == 2) {
+                sn?.let {
+                    MyApp.mainViewModel.isNetworkConfig = true
+                    MyApp.socketEventViewModel.initSocket(sn)
+                }
+            }
+        } else {
+            Logger.e("参数配置错误")
         }
 
     }
+
 
     companion object {
         private const val NAME = "PREVENT"

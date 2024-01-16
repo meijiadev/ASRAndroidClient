@@ -78,11 +78,14 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
         // http://192.168.1.6:80/webrtc?
         //http://192.168.1.6:80/device?
-        private var BASE_URL = "http://cloud.hdvsiot.com:8080/"
+        var BASE_URL = "http://cloud.hdvsiot.com:8080/"
         private const val DEV_BASE_URL = "http://192.168.1.6:80/"
         private const val BASE_HTTP_URL_ZYQ = "http://cloud.zyq0407.com:8080/"
         private const val isDevVersion = false
         const val HOST_URL_KEY = "host_url_key"
+
+        // 是否注册平台
+        var isRegister = false
         fun getHostUrl(): String {
             return if (isDevVersion) {
                 BASE_HTTP_URL_ZYQ
@@ -119,7 +122,6 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
     private var alarmFile: File? = null
 
     private var volumeDb: Int? = null
-
 
 
     fun initSocket(sn: String) {
@@ -159,9 +161,9 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         BASE_URL = url
         mSocket?.disconnect()
         mSocket = null
-        if (snCode != null) {
-            initSocket(snCode!!)
-        }
+//        if (snCode != null) {
+//            initSocket(snCode!!)
+//        }
     }
 
 
@@ -355,6 +357,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                         }
 
                     }
+                    isRegister = true
                 }
 
                 MessageType.VoiceAdd.toString() -> {
@@ -470,6 +473,16 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
             msgEvent.postValue("connect ..连接成功")
             login()
             isConnected = true
+            // 检测是否配网成功
+            MyApp.mainViewModel.run {
+                if (isNetworkConfig && configUrl == BASE_URL) {
+                    viewModelScope.launch {
+                        networkConfigEvent.postValue(3)
+                        isNetworkConfig = false
+                    }
+                }
+            }
+
         }
 
         mSocket?.on(Socket.EVENT_CONNECT_ERROR) {

@@ -54,7 +54,7 @@ class SpManager {
          * @param key 存储时的键
          */
         fun getString(key: String): String? {
-            return kv.decodeString(key, "")
+            return kv.decodeString(key)
         }
 
         /**
