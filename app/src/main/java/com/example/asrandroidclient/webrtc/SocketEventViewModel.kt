@@ -358,6 +358,15 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
                     }
                     isRegister = true
+                    // 检测是否配网成功,已经注册到平台
+                    MyApp.mainViewModel.run {
+                        if (isNetworkConfig && configUrl == BASE_URL) {
+                            viewModelScope.launch {
+                                networkConfigEvent.postValue(3)
+                                isNetworkConfig = false
+                            }
+                        }
+                    }
                 }
 
                 MessageType.VoiceAdd.toString() -> {
@@ -473,15 +482,6 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
             msgEvent.postValue("connect ..连接成功")
             login()
             isConnected = true
-            // 检测是否配网成功
-            MyApp.mainViewModel.run {
-                if (isNetworkConfig && configUrl == BASE_URL) {
-                    viewModelScope.launch {
-                        networkConfigEvent.postValue(3)
-                        isNetworkConfig = false
-                    }
-                }
-            }
 
         }
 
@@ -490,6 +490,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                 Logger.i("socket.io 连接错误：${a}")
             }
             isConnected = false
+            //isRegister = false
             msgEvent.postValue("全局socket.io ..连接错误")
         }
 
@@ -499,6 +500,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                 msgEvent.postValue("socket.io 断开连接")
             }
             isConnected = false
+            isRegister = false
         }
 
     }

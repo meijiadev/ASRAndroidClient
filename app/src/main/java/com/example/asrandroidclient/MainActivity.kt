@@ -328,6 +328,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 sn?.let { sn ->
                     MyApp.mainViewModel.sendNetworkFinish(sn)
                 }
+                restartIvw()
             } else if (it == 4) {
                 textToSpeech?.speak("设备已配置，无需再进行配网", TextToSpeech.QUEUE_ADD, null, null)
                 MyApp.mainViewModel.sendHasRegister()
