@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     private var ivwHelper: IvwHelper? = null
     private var keyWord: String =
         "救命救命"
-    private var threshold: Int = 1000     //范围 0-3000
+    private var threshold: Int = 500     //范围 0-3000
 
     private var textToSpeech: TextToSpeech? = null
 
@@ -305,10 +305,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 manager.download()
                 MyApp.socketEventViewModel.uploadState("4", "正在更新中")
                 isUpdate = true
-                //    } else {
                 Logger.i("服务器最新版本和本地版本一致")
-                //   }
-
             }
         }
         MyApp.mainViewModel.bleConnectedEvent.observe(this) {
@@ -547,12 +544,9 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     }
 
+    private var lastUploadTime = 0L
     override fun onAbilityResult(result: String) {
         val volume = analyseVolume()
-        Logger.i("$result，当前声音分贝：$volume")
-//        if (volume < 75) {
-//            return
-//        }
         val rs = result.replace("func_wake_up:", "")
         runCatching {
             val speechResult = Gson().fromJson(rs, SpeechResult::class.java)
@@ -560,19 +554,31 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             MainScope().launch(Dispatchers.IO) {
                 val keywordBean =
                     AppDataBase.getInstance().keyWordDao().findByKeyword(rtl.keyword)
-                val credibility = keywordBean?.credibility ?: 900
+                var credibility = keywordBean?.credibility ?: 900
                 val enable = keywordBean?.enabled ?: true
                 val voiceId = keywordBean?.voiceId
                 val voiceBean = AppDataBase.getInstance().voiceDao().findById(voiceId)
                 speechMsg = voiceBean?.text ?: "请勿打架斗殴"
                 speechMsgTimes = voiceBean?.times ?: 1
-                Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
+                Logger.i("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
+                if (volume < 40) {
+                    return@launch
+                }
                 val alarmFile = writeBytesToFile()
                 val wavPath =
                     FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
+                if (volume > 75) {
+                    // 当噪音过大时，降低置信度
+                    credibility = 800
+                }
                 if (alarmFile != null) {
                     PcmToWavConverter.pcmToWav(alarmFile, wavPath)
                     if (rtl.ncm_keyword > credibility && enable) {
+                        Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
+                        if (System.currentTimeMillis() - lastUploadTime < 8 * 1000) {
+                            return@launch
+                        }
+                        lastUploadTime = System.currentTimeMillis()
                         //if (rs.contains("救命救命")) {
                         for (i in 0 until speechMsgTimes) {
                             textToSpeech?.speak(
@@ -618,7 +624,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             if (a > 65) {
                 count++
                 sum += a
-                Logger.i("volume:$a")
+//                Logger.i("volume:$a")
             }
         }
         if (count == 0) count = 1

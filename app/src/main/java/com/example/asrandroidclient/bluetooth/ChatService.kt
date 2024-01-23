@@ -5,13 +5,7 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
-import android.content.Context
-import android.os.Handler
-import android.util.Log
 import com.example.asrandroidclient.MyApp
-import com.example.asrandroidclient.tool.ByteArrayQueue
-import com.example.asrandroidclient.webrtc.SocketEventViewModel
-import com.example.asrandroidclient.webrtc.SocketEventViewModel.Companion.BASE_URL
 import com.example.asrandroidclient.webrtc.SocketEventViewModel.Companion.getHostUrl
 import com.example.asrandroidclient.webrtc.SocketEventViewModel.Companion.isRegister
 import com.google.gson.Gson

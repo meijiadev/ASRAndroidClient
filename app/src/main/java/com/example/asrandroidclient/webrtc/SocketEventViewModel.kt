@@ -30,6 +30,7 @@ import io.socket.client.Socket
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType
@@ -78,20 +79,22 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
         // http://192.168.1.6:80/webrtc?
         //http://192.168.1.6:80/device?
-        var BASE_URL = "http://cloud.hdvsiot.com:8080/"
-        private const val DEV_BASE_URL = "http://192.168.1.6:80/"
-        private const val BASE_HTTP_URL_ZYQ = "http://cloud.zyq0407.com:8080/"
-        private const val isDevVersion = false
+        private const val BASE_TEST_HTTP_URL = "http://cloud.hdvsiot.com:8080/"             // 测试环境
+        private const val BASE_HTTP_URL = "https://spad-cloud.hdvsiot.com/"             // 演示环境
+        private const val BASE_HTTP_URL_ZYQ = "http://cloud.zyq0407.com:8080/"       // 开发环境
+        private const val isDevVersion = true
+        private const val isTestVersion = true        // 是否是测试版本
         const val HOST_URL_KEY = "host_url_key"
 
         // 是否注册平台
         var isRegister = false
         fun getHostUrl(): String {
-            return if (isDevVersion) {
-                BASE_HTTP_URL_ZYQ
+            return if (isTestVersion) {
+                // BASE_HTTP_URL_ZYQ
+                (SpManager.getString(HOST_URL_KEY) ?: BASE_TEST_HTTP_URL)
             } else {
-                (SpManager.getString(HOST_URL_KEY) ?: BASE_URL)
-            }
+                BASE_HTTP_URL
+                                                                                                                                      }
         }
 
     }
@@ -158,7 +161,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
     fun setUrl(url: String) {
         SpManager.putString(HOST_URL_KEY, url)
-        BASE_URL = url
+        // BASE_TEST_HTTP_URL = url
         mSocket?.disconnect()
         mSocket = null
 //        if (snCode != null) {
@@ -308,10 +311,10 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                             matchType = data.matchType
                             orgId = data.orgId
                             voiceId = data.voiceId
+                            AppDataBase.getInstance().keyWordDao().updateKeyword(result)
+                            delay(100)
+                            keywordUpdateEvent.postValue(KEYWORD_STATUS_EDIT)
                         }
-                        AppDataBase.getInstance().keyWordDao().updateKeyword(result!!)
-                        delay(100)
-                        keywordUpdateEvent.postValue(KEYWORD_STATUS_EDIT)
                     }
                 }
 
@@ -360,7 +363,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                     isRegister = true
                     // 检测是否配网成功,已经注册到平台
                     MyApp.mainViewModel.run {
-                        if (isNetworkConfig && configUrl == BASE_URL) {
+                        if (isNetworkConfig && configUrl == getHostUrl()) {
                             viewModelScope.launch {
                                 networkConfigEvent.postValue(3)
                                 isNetworkConfig = false
