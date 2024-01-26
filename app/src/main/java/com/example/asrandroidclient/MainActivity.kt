@@ -569,7 +569,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
                 if (volume > 75) {
                     // 当噪音过大时，降低置信度
-                    credibility = 800
+                    credibility = 850
                 }
                 if (alarmFile != null) {
                     PcmToWavConverter.pcmToWav(alarmFile, wavPath)
