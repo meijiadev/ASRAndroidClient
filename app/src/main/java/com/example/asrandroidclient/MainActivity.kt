@@ -7,7 +7,6 @@ import android.os.Build
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.text.method.ScrollingMovementMethod
-import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.azhon.appupdate.listener.OnDownloadListenerAdapter
@@ -30,11 +29,14 @@ import com.example.asrandroidclient.tool.NetworkUtil
 import com.example.asrandroidclient.tool.PcmToWavConverter
 import com.example.asrandroidclient.tool.calculateVolume
 import com.example.asrandroidclient.tool.stampToDate
-import com.example.asrandroidclient.webrtc.SocketEventViewModel
 import com.google.gson.Gson
 import com.hjq.permissions.OnPermissionCallback
 import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
+import com.iflytek.cloud.ErrorCode
+import com.iflytek.cloud.InitListener
+import com.iflytek.cloud.SpeechConstant
+import com.iflytek.cloud.SpeechRecognizer
 import com.orhanobut.logger.Logger
 import com.ys.rkapi.MyManager
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +50,6 @@ import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import java.nio.charset.Charset
 import java.util.Locale
-import kotlin.math.max
 
 
 class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
@@ -165,7 +166,27 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         MyApp.mainViewModel.initBlue()
     }
 
+    private var mIat: SpeechRecognizer? = null
 
+    /**
+     * 初始化语音听写的业务
+     */
+    private fun initRecognizer() {
+        mIat=SpeechRecognizer.createRecognizer(this,mInitListener)
+        mIat?.setParameter(SpeechConstant.LANGUAGE, "zh_cn")
+    }
+
+    /**
+     * 初始化监听器。
+     */
+    private val mInitListener = InitListener { code ->
+        Logger.i(
+            "SpeechRecognizer init() code = $code"
+        )
+        if (code != ErrorCode.SUCCESS) {
+            Logger.e("初始化失败，错误码：$code,请点击网址https://www.xfyun.cn/document/error-code查询解决方案")
+        }
+    }
     /**
      * 获取数据库中的keywords表中的数据
      */
@@ -572,7 +593,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 if (alarmFile != null) {
                     PcmToWavConverter.pcmToWav(alarmFile, wavPath)
                     if (rtl.ncm_keyword > credibility && enable) {
-                       // Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
+                        // Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
                         if (System.currentTimeMillis() - lastUploadTime < 8 * 1000) {
                             return@launch
                         }
@@ -760,7 +781,6 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
 
     override fun onStop() {
-        Logger.i("退出app")
         // ivwHelper?.stopAudioRecord()
         super.onStop()
         Logger.i("stop")

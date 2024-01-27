@@ -6,6 +6,7 @@ import com.example.asrandroidclient.util.SpManager
 import com.example.asrandroidclient.viewmodel.MainViewModel
 import com.example.asrandroidclient.webrtc.SocketEventViewModel
 import com.example.asrandroidclient.webrtc.WebrtcSocketManager
+import com.iflytek.cloud.SpeechUtility
 import com.orhanobut.logger.AndroidLogAdapter
 import com.orhanobut.logger.Logger
 import com.orhanobut.logger.PrettyFormatStrategy
@@ -42,6 +43,7 @@ class MyApp : BaseApplication() {
         mainViewModel = getApplicationViewModel(MainViewModel::class.java)
         socketEventViewModel = getApplicationViewModel(SocketEventViewModel::class.java)
         webrtcSocketManager = getApplicationViewModel(WebrtcSocketManager::class.java)
+        SpeechUtility.createUtility(this, "appid=$APPID")
     }
 
 }
