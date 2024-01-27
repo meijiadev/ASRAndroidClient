@@ -16,7 +16,7 @@ class MainViewModel : ViewModel() {
     var networkConfigEvent = UnPeekLiveData<Int>()         // 1:开始配网   2： 配网已完成
     var isNetworkConfig = false                            // 是否进入配网环节
     var configUrl: String? = null                          // 配置的地址
-    var chatService: ChatService? = null
+    private var chatService: ChatService? = null
     fun initBlue() {
         chatService = ChatService()
         chatService?.start()

@@ -33,5 +33,15 @@ class ByteArrayQueue {
         return re
     }
 
+    fun getBytes(length: Int): ByteArray {
+        return if (length < elements.size) {
+            val re = elements.copyOfRange(elements.size - length, elements.size)
+            re
+        } else {
+            val re = elements.copyOf()
+            re
+        }
+    }
+
     operator fun plusAssign(items: ByteArray) = append(items)
 }

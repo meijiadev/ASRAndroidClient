@@ -3,6 +3,9 @@ package com.example.asrandroidclient.ability
 import android.content.Context
 import android.os.Environment
 import android.util.Log
+import com.example.asrandroidclient.APIKey
+import com.example.asrandroidclient.APISecret
+import com.example.asrandroidclient.APPID
 import com.example.asrandroidclient.MyApp
 import com.example.asrandroidclient.file.FileUtil
 import com.iflytek.aikit.core.AiHelper
@@ -24,9 +27,7 @@ class IFlytekAbilityManager private constructor() {
 
         //在线授权校验间隔时长，默认为300s，可自定义设置，最短为60s，单位 秒
         private const val AUTH_INTERVAL = 333
-        const val APPID = "f18ca9eb"
-        const val APISecret = "YTRiOWI0NThiOGQ0NWYwZjZlZGNlODM1"
-        const val APIKey = "731ebf4effedcfa7974cdecc3b5b328e"
+
 
         @Volatile
         private var instance: IFlytekAbilityManager? = null

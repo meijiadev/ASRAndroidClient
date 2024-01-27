@@ -3,6 +3,7 @@ package com.example.asrandroidclient
 import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioManager
+import android.os.Build
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.text.method.ScrollingMovementMethod
@@ -25,6 +26,7 @@ import com.example.asrandroidclient.room.AppDataBase
 import com.example.asrandroidclient.room.bean.KeywordBean
 import com.example.asrandroidclient.tool.ByteArrayQueue
 import com.example.asrandroidclient.tool.IntArrayQueue
+import com.example.asrandroidclient.tool.NetworkUtil
 import com.example.asrandroidclient.tool.PcmToWavConverter
 import com.example.asrandroidclient.tool.calculateVolume
 import com.example.asrandroidclient.tool.stampToDate
@@ -55,7 +57,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     private var ivwHelper: IvwHelper? = null
     private var keyWord: String =
         "救命救命"
-    private var threshold: Int = 500     //范围 0-3000
+    private var threshold: Int = 600     //范围 0-3000
 
     private var textToSpeech: TextToSpeech? = null
 
@@ -120,6 +122,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager?
         //showVolumeDb()
         msgTV.movementMethod = ScrollingMovementMethod.getInstance()
+        msgTV.text = NetworkUtil.getIPAddress(true)
     }
 
     private fun initPermission() {
@@ -238,7 +241,6 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         MyApp.socketEventViewModel.msgEvent.observe(this) {
             val text = msgTV.text.toString()
             msgTV.text = text + "\n" + it
-
         }
 
         MyApp.socketEventViewModel.keywordUpdateEvent.observe(this) {
@@ -412,7 +414,6 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     withContext(Dispatchers.Main) {
                         restartIvw()
                     }
-                    // MyApp.socketEventViewModel.uploadState("3", "设备故障")
                 } else {
                     //  MyApp.socketEventViewModel.uploadState("2", "故障解除")
 //                    Logger.d("语音引擎是否启动：$ivwIsOpen,是否正在通话：$isVoiceCall,是否正在引擎初始化中：$isBeingStarted")
@@ -426,7 +427,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
 
     /**
-     * 生成
+     * 生成关键词文件
      */
     private fun createKeywordFile(key: String): String {
         val file = File(MyApp.CONTEXT.externalCacheDir, "keyword.txt")
@@ -472,14 +473,6 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         override fun onRecordProgress(data: ByteArray, sampleSize: Int, volume: Int) {
             writeByteToQueue(data)
             calculateVolume = data.calculateVolume()
-//            Logger.d("当前分贝：$calculateVolume")
-            if (calculateVolume > 80) {
-                Logger.d("当前分贝:$calculateVolume")
-            } else if (calculateVolume > 90) {
-                Logger.d("当前分贝:$calculateVolume")
-            } else if (calculateVolume > 100) {
-                Logger.d("当前分贝:$calculateVolume")
-            }
             //从刚刚开始录音500ms以后开始判断是否拾音器故障
             if (System.currentTimeMillis() - startRecordTime < 1500) {
                 return
@@ -564,17 +557,22 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 if (volume < 40) {
                     return@launch
                 }
-                val alarmFile = writeBytesToFile()
-                val wavPath =
-                    FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
-                if (volume > 75) {
+                val webIATws = WebIATws()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val length = AudioRecorder.SAMPLE_RATE_IN_HZ * AudioRecorder.AUDIO_FORMAT * 3
+                    webIATws.initWebIA(byteArrayQueue.getBytes(length))
+                }
+                if (volume > 80) {
                     // 当噪音过大时，降低置信度
                     credibility = 850
                 }
+                val alarmFile = writeBytesToFile()
+                val wavPath =
+                    FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
                 if (alarmFile != null) {
                     PcmToWavConverter.pcmToWav(alarmFile, wavPath)
                     if (rtl.ncm_keyword > credibility && enable) {
-                        Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
+                       // Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
                         if (System.currentTimeMillis() - lastUploadTime < 8 * 1000) {
                             return@launch
                         }
@@ -613,6 +611,11 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         }
 
     }
+
+    private fun upload() {
+
+    }
+
 
     /**
      * 分析当前15帧数据
@@ -751,8 +754,6 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
     override fun onPause() {
-//        textToSpeech?.stop()
-//        textToSpeech?.shutdown()
         super.onPause()
         Logger.i("pause")
     }
