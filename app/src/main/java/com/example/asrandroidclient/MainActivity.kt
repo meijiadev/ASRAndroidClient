@@ -212,14 +212,14 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         Logger.i("语音识别初始化完成！")
         kotlin.runCatching {
             val length = AudioRecorder.SAMPLE_RATE_IN_HZ * AudioRecorder.AUDIO_FORMAT * 5
-            val data = byteArrayQueue.getBytes(length)
-//            val open = ByteArrayInputStream(byteArrayQueue.getBytes(length))
-//            val buff = ByteArray(1280)
-//            while (open.available() > 0) {
-//                val read = open.read(buff)
-//                mIat?.writeAudio(buff, 0, read)
-//            }
-            mIat?.writeAudio(data, 0, data.size)
+            //val data = byteArrayQueue.getBytes(length)
+            val open = ByteArrayInputStream(byteArrayQueue.getBytes(length))
+            val buff = ByteArray(1280)
+            while (open.available() > 0) {
+                val read = open.read(buff)
+                mIat?.writeAudio(buff, 0, read)
+            }
+            //mIat?.writeAudio(data, 0, data.size)
             mIat?.stopListening()
         }.onFailure {
             mIat?.cancel()
