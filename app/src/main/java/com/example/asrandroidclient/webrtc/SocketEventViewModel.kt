@@ -212,7 +212,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         this.alarmFile = alarmFile
         this.volumeDb = db
         mSocket?.emit("uploadFileUrlMessage", snCode)
-        Logger.i("获取上传文件地址链接命令")
+        Logger.d("获取上传文件地址链接命令")
     }
 
     /**
@@ -457,7 +457,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
 
 
         mSocket?.on("uploadFileUrlMessage") {
-            Logger.i("获取文件上传地址：${it[0]}")
+            Logger.d("获取文件上传地址：${it[0]}")
             val url = it[0].toString()
             alarmFile?.let {
                 uploadFile(url, it)
@@ -532,7 +532,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                 } else {
                     val jsonStr = response.body()?.string()
                     val uploadFileResult = Gson().fromJson(jsonStr, UploadFileResult::class.java)
-                    Logger.i("上传成功：${uploadFileResult}")
+                    Logger.d("上传成功：${uploadFileResult}")
                     if (uploadFileResult.success) {
                         uploadWarnMsg(uploadFileResult.data.fileId)
                     }

@@ -16,6 +16,7 @@ import com.example.asrandroidclient.ability.AbilityCallback
 import com.example.asrandroidclient.ability.AbilityConstant
 import com.example.asrandroidclient.ability.IFlytekAbilityManager
 import com.example.asrandroidclient.ability.abilityAuthStatus
+import com.example.asrandroidclient.data.Rlt
 import com.example.asrandroidclient.data.SpeechResult
 import com.example.asrandroidclient.file.FileUtil
 import com.example.asrandroidclient.ivw.IvwHelper
@@ -63,7 +64,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     private var ivwHelper: IvwHelper? = null
     private var keyWord: String =
         "救命救命"
-    private var threshold: Int = 600     //范围 0-3000
+    private var keywordList = mutableListOf<String>()
+    private var threshold: Int = 700     //范围 0-3000
 
     private var textToSpeech: TextToSpeech? = null
 
@@ -105,6 +107,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     private var onLineDbCount = 0
     private var offlineDb = 0
     private var startRecordTime: Long = 0       // 刚刚开始录音的时间
+    private var strMsg = StringBuffer()
 
     private var volumeQueue = IntArrayQueue()
 
@@ -188,13 +191,13 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         mIat?.setParameter(SpeechConstant.ACCENT, "mandarin")
         mIat?.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD)
         // 设置返回结果格式
-        mIat?.setParameter(SpeechConstant.RESULT_TYPE, "json")
+        mIat?.setParameter(SpeechConstant.RESULT_TYPE, "plain ")
         //取值范围{1000～10000}
         mIat?.setParameter(SpeechConstant.VAD_BOS, "6000")
         //自动停止录音，范围{0~10000}
         mIat?.setParameter(SpeechConstant.VAD_EOS, "2000")
         // 设置标点符号,设置为"0"返回结果无标点,设置为"1"返回结果有标点
-        mIat?.setParameter(SpeechConstant.ASR_PTT, "1")
+        mIat?.setParameter(SpeechConstant.ASR_PTT, "0")
         // 设置音频来源为外部文件
         mIat?.setParameter(SpeechConstant.AUDIO_SOURCE, "-1")
     }
@@ -203,7 +206,9 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
      * 执行语音听写任务
      */
     private fun executeRecognizer() {
+        // lastUploadTime = System.currentTimeMillis()
         setParam()
+        strMsg.setLength(0)
         val ret = mIat?.startListening(mRecognizerListener)
         if (ret != ErrorCode.SUCCESS) {
             Logger.e("识别失败，错误码：$ret")
@@ -211,15 +216,12 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         }
         Logger.i("语音识别初始化完成！")
         kotlin.runCatching {
-            val length = AudioRecorder.SAMPLE_RATE_IN_HZ * AudioRecorder.AUDIO_FORMAT * 5
-            //val data = byteArrayQueue.getBytes(length)
-            val open = ByteArrayInputStream(byteArrayQueue.getBytes(length))
+            val open = ByteArrayInputStream(keyArrayQueue.popAll())
             val buff = ByteArray(1280)
             while (open.available() > 0) {
                 val read = open.read(buff)
                 mIat?.writeAudio(buff, 0, read)
             }
-            //mIat?.writeAudio(data, 0, data.size)
             mIat?.stopListening()
         }.onFailure {
             mIat?.cancel()
@@ -237,8 +239,9 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         override fun onError(error: SpeechError) {
             // Tips：
             // 错误码：10118(您没有说话)，可能是录音机权限被禁，需要提示用户打开应用的录音权限。
-            Logger.i("onError " + error.getPlainDescription(true))
-            Logger.e(error.getPlainDescription(true))
+            Logger.e("onError " + error.getPlainDescription(true))
+            // Logger.e(error.getPlainDescription(true))
+            // strMsg.setLength(0)
         }
 
         override fun onEndOfSpeech() {
@@ -247,19 +250,33 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         }
 
         override fun onResult(results: RecognizerResult, isLast: Boolean) {
-            Logger.e(results.resultString)
+            Logger.i(results.resultString)
+            val word = results.resultString
+            strMsg.append(word)
             if (isLast) {
-                Logger.i("onResult 结束")
+                val str = strMsg.toString().replace(" ", "")
+                Logger.e(
+                    "onResult 结束:${str},当前关键词:${curKeyword.trim()},关键词库：$keyWord"
+                )
+                if (str.contains(curKeyword)) {
+                    uploadAlarm()
+                } else {
+                    for (key in keywordList) {
+                        Logger.d("关键词库：$key")
+                        if (key.isEmpty()) continue
+                        if (str.contains(key.trim())) {
+                            Logger.i("识别到关键词库中有包含：$key")
+                            // 语音识别到的文字中中包含这个关键词
+                            uploadAlarm()
+                            return
+                        }
+                    }
+                    // 会把他妈的 识别成tmd
+                    if (str.contains("tmd")){
+                        uploadAlarm()
+                    }
+                }
             }
-//            if (resultType == "json") {
-//                printResult(results)
-//                return
-//            }
-//            if (resultType == "plain") {
-//                buffer.append(results.resultString)
-//                mResultText.setText(buffer.toString())
-//                mResultText.setSelection(mResultText.length())
-//            }
         }
 
         override fun onVolumeChanged(volume: Int, data: ByteArray) {
@@ -517,7 +534,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 Logger.i("将数据库中的关键字写入到讯飞配置文件中：$keyStr")
                 keyWord = keyStr
                 val filePath = createKeywordFile(keyWord)
-                val keywordSize = keyWord.trim().split(";").count()
+                keywordList = keyWord.trim().split(";").toMutableList()
+                val keywordSize = keywordList.count()
                 withContext(Dispatchers.Main) {
                     ivwHelper?.startAudioRecord(filePath, keywordSize, threshold)
                     Logger.i("重新启动录音，正在录音中...")
@@ -662,70 +680,44 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
     private var lastUploadTime = 0L
+    private var rtl: Rlt? = null
+    private var credibility: Int = 0
+    private var enable = false
+    private var keywordBean: KeywordBean? = null
+    private var volume: Int = 0
+    private lateinit var curKeyword: String
     override fun onAbilityResult(result: String) {
-        val volume = analyseVolume()
+        volume = analyseVolume()
         val rs = result.replace("func_wake_up:", "")
         runCatching {
             val speechResult = Gson().fromJson(rs, SpeechResult::class.java)
-            val rtl = speechResult.rlt[0]
+            rtl = speechResult.rlt[0]
+            if (rtl == null) {
+                return
+            }
             MainScope().launch(Dispatchers.IO) {
-                val keywordBean =
-                    AppDataBase.getInstance().keyWordDao().findByKeyword(rtl.keyword)
-                var credibility = keywordBean?.credibility ?: 900
-                val enable = keywordBean?.enabled ?: true
+                curKeyword = rtl!!.keyword
+                keywordBean =
+                    AppDataBase.getInstance().keyWordDao().findByKeyword(rtl!!.keyword)
+                credibility = keywordBean?.credibility ?: 900
+                enable = keywordBean?.enabled ?: true
                 val voiceId = keywordBean?.voiceId
                 val voiceBean = AppDataBase.getInstance().voiceDao().findById(voiceId)
                 speechMsg = voiceBean?.text ?: "请勿打架斗殴"
                 speechMsgTimes = voiceBean?.times ?: 1
-                Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
-//                if (volume < 40) {
-//                    return@launch
-//                }
+                Logger.e("触发唤醒关键字：${rtl?.keyword},关键字得分：${rtl?.ncm_keyword}，门限值：${rtl?.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
                 withContext(Dispatchers.Main) {
-                    delay(300)
-                    executeRecognizer()
-                    if (volume > 80) {
-                        // 当噪音过大时，降低置信度
-                        credibility = 850
+                    if (System.currentTimeMillis() - lastUploadTime < 5 * 1000) {
+                        return@withContext
                     }
-                    val alarmFile = writeBytesToFile()
-                    val wavPath =
-                        FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
-                    if (alarmFile != null) {
-                        PcmToWavConverter.pcmToWav(alarmFile, wavPath)
-                        if (rtl.ncm_keyword > credibility && enable) {
-                            // Logger.e("触发唤醒关键字：${rtl.keyword},关键字得分：${rtl.ncm_keyword}，门限值：${rtl.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
-                            if (System.currentTimeMillis() - lastUploadTime < 8 * 1000) {
-                                return@withContext
-                            }
-                            lastUploadTime = System.currentTimeMillis()
-                            //if (rs.contains("救命救命")) {
-                            for (i in 0 until speechMsgTimes) {
-                                textToSpeech?.speak(
-                                    speechMsg,
-                                    TextToSpeech.QUEUE_ADD,
-                                    null,
-                                    null
-                                )
-                            }
-                            if (keywordBean != null) {
-                                val key = rtl.keyword
-                                val keyId = keywordBean.keywordId.toLong()
-                                val ncm = rtl.ncm_keyword
-                                val duration = (rtl.iduration * 10).toString()
-                                if (alarmFile != null)
-                                    MyApp.socketEventViewModel.getUploadFileUrl(
-                                        key,
-                                        keyId,
-                                        ncm,
-                                        duration,
-                                        File(wavPath),
-                                        volume
-                                    )
-                            }
-                            // }
-                        }
+                    if (rtl!!.ncm_keyword < 1300) {
+                        delay(500)
+                        executeRecognizer()
+                        // 二次检验
+                    } else {
+                        uploadAlarm()
                     }
+
                 }
             }
         }.onFailure {
@@ -735,8 +727,49 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
     }
 
-    private fun upload() {
+    /**
+     * 语音报警加上传至平台
+     */
+    private fun uploadAlarm(
+    ) {
+        Logger.i("准备上传信息,并报警")
+        if (rtl != null) {
+            if (enable) {
+                val alarmFile = writeBytesToFile()
+                val wavPath =
+                    FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
+                lastUploadTime = System.currentTimeMillis()
+                //if (rs.contains("救命救命")) {
+                for (i in 0 until speechMsgTimes) {
+                    textToSpeech?.speak(
+                        speechMsg,
+                        TextToSpeech.QUEUE_ADD,
+                        null,
+                        null
+                    )
+                }
+                if (keywordBean != null) {
+                    val key = rtl!!.keyword
+                    val keyId = keywordBean?.keywordId?.toLong() ?: 0
+                    val ncm = rtl!!.ncm_keyword
+                    val duration = (rtl!!.iduration * 10).toString()
+                    if (alarmFile != null) {
+                        PcmToWavConverter.pcmToWav(alarmFile, wavPath)
+                    }
+                    if (alarmFile != null)
+                        MyApp.socketEventViewModel.getUploadFileUrl(
+                            key,
+                            keyId,
+                            ncm,
+                            duration,
+                            File(wavPath),
+                            volume
+                        )
+                }
+                // }
+            }
 
+        }
     }
 
 
@@ -747,7 +780,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         var count = 0
         var sum = 0
         for (a in volumeQueue.getAll()) {
-            if (a > 65) {
+            if (a > 50) {
                 count++
                 sum += a
 //                Logger.i("volume:$a")
@@ -810,6 +843,9 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
 
 
     private var byteArrayQueue = ByteArrayQueue()
+    private var keyArrayQueue = ByteArrayQueue()
+
+    private var keyMaxSize = AudioRecorder.SAMPLE_RATE_IN_HZ * AudioRecorder.AUDIO_FORMAT * 5
 
     // 30秒音频所占的格式
     private var maxQueueSize = AudioRecorder.SAMPLE_RATE_IN_HZ * AudioRecorder.AUDIO_FORMAT * 30
@@ -848,6 +884,10 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
      */
     private fun writeByteToQueue(data: ByteArray) {
         // val time = System.currentTimeMillis()
+        keyArrayQueue.append(data)
+        if (keyArrayQueue.size > keyMaxSize) {
+            keyArrayQueue.pop(keyArrayQueue.size - keyMaxSize)
+        }
         byteArrayQueue.append(data)
         if (byteArrayQueue.size > maxQueueSize) {
             byteArrayQueue.pop(byteArrayQueue.size - maxQueueSize)
