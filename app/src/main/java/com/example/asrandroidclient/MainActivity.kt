@@ -737,53 +737,56 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     private fun uploadAlarm(
         key: String
     ) {
-        if (key != curKeyword) {
-            keywordBean =
-                AppDataBase.getInstance().keyWordDao().findByKeyword(key)
-            credibility = keywordBean?.credibility ?: 900
-            enable = keywordBean?.enabled ?: true
-            val voiceId = keywordBean?.voiceId
-            val voiceBean = AppDataBase.getInstance().voiceDao().findById(voiceId)
-            speechMsg = voiceBean?.text ?: "请勿打架斗殴"
-            speechMsgTimes = voiceBean?.times ?: 1
-        }
-        Logger.i("准备上传信息,并报警")
-        if (rtl != null) {
-            if (enable) {
-                for (i in 0 until speechMsgTimes) {
-                    textToSpeech?.speak(
-                        speechMsg,
-                        TextToSpeech.QUEUE_ADD,
-                        null,
-                        null
-                    )
-                }
-                val alarmFile = writeBytesToFile()
-                val wavPath =
-                    FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
-                lastUploadTime = System.currentTimeMillis()
-                //if (rs.contains("救命救命")) {
-                if (keywordBean != null) {
-                    val keyId = keywordBean?.keywordId?.toLong() ?: 0
-                    val ncm = rtl!!.ncm_keyword
-                    val duration = (rtl!!.iduration * 10).toString()
-                    if (alarmFile != null) {
-                        PcmToWavConverter.pcmToWav(alarmFile, wavPath)
-                    }
-                    if (alarmFile != null)
-                        MyApp.socketEventViewModel.getUploadFileUrl(
-                            key,
-                            keyId,
-                            ncm,
-                            duration,
-                            File(wavPath),
-                            volume
-                        )
-                }
-                // }
+        MainScope().launch(Dispatchers.IO){
+            if (key != curKeyword) {
+                keywordBean =
+                    AppDataBase.getInstance().keyWordDao().findByKeyword(key)
+                credibility = keywordBean?.credibility ?: 900
+                enable = keywordBean?.enabled ?: true
+                val voiceId = keywordBean?.voiceId
+                val voiceBean = AppDataBase.getInstance().voiceDao().findById(voiceId)
+                speechMsg = voiceBean?.text ?: "请勿打架斗殴"
+                speechMsgTimes = voiceBean?.times ?: 1
             }
+            Logger.i("准备上传信息,并报警")
+            if (rtl != null) {
+                if (enable) {
+                    for (i in 0 until speechMsgTimes) {
+                        textToSpeech?.speak(
+                            speechMsg,
+                            TextToSpeech.QUEUE_ADD,
+                            null,
+                            null
+                        )
+                    }
+                    val alarmFile = writeBytesToFile()
+                    val wavPath =
+                        FileUtil.getAlarmCacheDir() + "/" + (System.currentTimeMillis()).stampToDate() + ".wav"
+                    lastUploadTime = System.currentTimeMillis()
+                    //if (rs.contains("救命救命")) {
+                    if (keywordBean != null) {
+                        val keyId = keywordBean?.keywordId?.toLong() ?: 0
+                        val ncm = rtl!!.ncm_keyword
+                        val duration = (rtl!!.iduration * 10).toString()
+                        if (alarmFile != null) {
+                            PcmToWavConverter.pcmToWav(alarmFile, wavPath)
+                        }
+                        if (alarmFile != null)
+                            MyApp.socketEventViewModel.getUploadFileUrl(
+                                key,
+                                keyId,
+                                ncm,
+                                duration,
+                                File(wavPath),
+                                volume
+                            )
+                    }
+                    // }
+                }
 
+            }
         }
+
     }
 
 
