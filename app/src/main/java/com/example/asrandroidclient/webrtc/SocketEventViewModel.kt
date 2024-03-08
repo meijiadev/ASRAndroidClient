@@ -80,7 +80,8 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
         // http://192.168.1.6:80/webrtc?
         //http://192.168.1.6:80/device?
         private const val BASE_TEST_HTTP_URL = "http://cloud.hdvsiot.com:8080/"             // 测试环境
-        private const val BASE_HTTP_URL = "https://spad-cloud.hdvsiot.com/"             // 演示环境
+        //private const val BASE_HTTP_URL = "https://spad-cloud.hdvsiot.com/"             // 演示环境
+        private const val Base_COBWEB_URL="https://spad-cloud.cobwebiot.com/"
         private const val BASE_HTTP_URL_ZYQ = "http://cloud.zyq0407.com:8080/"       // 开发环境
         private const val isDevVersion = true
         private const val isTestVersion = false        // 是否是测试版本
@@ -93,7 +94,7 @@ class SocketEventViewModel : ViewModel(), HandlerAction {
                 // BASE_HTTP_URL_ZYQ
                 (SpManager.getString(HOST_URL_KEY) ?: BASE_TEST_HTTP_URL)
             } else {
-                BASE_HTTP_URL
+                Base_COBWEB_URL
                                                                                                                                       }
         }
 

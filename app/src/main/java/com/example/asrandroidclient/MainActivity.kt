@@ -714,8 +714,8 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 if (System.currentTimeMillis() - lastUploadTime < 5 * 1000) {
                     return@launch
                 }
-                if (rtl!!.ncm_keyword < 1300) {
-                    delay(500)
+                if (rtl!!.ncm_keyword < 1200) {
+                    delay(800)
                     executeRecognizer()
                     // 二次检验
                 } else {
