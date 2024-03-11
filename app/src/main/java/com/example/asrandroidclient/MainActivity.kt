@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     private var keyWord: String =
         "救命救命"
     private var keywordList = mutableListOf<String>()
-    private var threshold: Int = 700     //范围 0-3000
+    private var threshold: Int = 600     //范围 0-3000
 
     private var textToSpeech: TextToSpeech? = null
 
