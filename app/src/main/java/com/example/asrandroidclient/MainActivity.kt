@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     private var keyWord: String =
         "救命救命"
     private var keywordList = mutableListOf<String>()
-    private var threshold: Int = 600     //范围 0-3000
+    private var threshold: Int = 700     //范围 0-3000
 
     private var textToSpeech: TextToSpeech? = null
 
@@ -192,8 +192,9 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         mIat?.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD)
         // 设置返回结果格式
         mIat?.setParameter(SpeechConstant.RESULT_TYPE, "plain ")
+        mIat?.setParameter("nunum","0")
 //        //取值范围{1000～10000}
-//        mIat?.setParameter(SpeechConstant.VAD_BOS, "6000")
+        mIat?.setParameter(SpeechConstant.VAD_BOS, "4000")
 //        //自动停止录音，范围{0~10000}
 //        mIat?.setParameter(SpeechConstant.VAD_EOS, "2000")
         // 设置标点符号,设置为"0"返回结果无标点,设置为"1"返回结果有标点
@@ -203,7 +204,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     }
 
     /**
-     * 执行语音听写任务
+     * 执行语音听写任务(二次校验)
      */
     private fun executeRecognizer() {
         // lastUploadTime = System.currentTimeMillis()
@@ -250,7 +251,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         }
 
         override fun onResult(results: RecognizerResult, isLast: Boolean) {
-            Logger.i(results.resultString)
+//            Logger.i(results.resultString)
             val word = results.resultString
             strMsg.append(word)
             if (isLast) {
@@ -280,7 +281,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
         }
 
         override fun onVolumeChanged(volume: Int, data: ByteArray) {
-            Logger.d("当前正在说话，音量大小 = " + volume + " 返回音频数据 = " + data.size)
+           // Logger.d("当前正在说话，音量大小 = " + volume + " 返回音频数据 = " + data.size)
         }
 
         override fun onEvent(p0: Int, p1: Int, p2: Int, obj: Bundle?) {
@@ -619,30 +620,31 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             }
             writeByteToQueue(data)
             calculateVolume = data.calculateVolume()
+            Logger.d("当前分贝：$calculateVolume")
             //从刚刚开始录音500ms以后开始判断是否拾音器故障
             if (System.currentTimeMillis() - startRecordTime < 1500) {
                 return
             }
-            if (calculateVolume < 40) {
+            if (calculateVolume < 6) {
                 onLineDbCount = 0
                 offlineDb++
                 if (offlineDb > 5) {
-                    Logger.i("当前分贝连续3次采集小于20：$calculateVolume")
+                    //Logger.i("当前分贝连续3次采集小于20：$calculateVolume")
                     if (isMicOnline) {
-                        MyApp.socketEventViewModel.uploadState("3", "拾音器故障")
+                 //       MyApp.socketEventViewModel.uploadState("3", "拾音器故障")
                     }
                     isMicOnline = false
                 }
             }
-            if (calculateVolume > 40) {
+            if (calculateVolume > 10) {
                 onLineDbCount++
                 offlineDb = 0
                 if (onLineDbCount > 10) {
-                    //   Logger.i("当前大于35分贝：$calculateVolume")
+                     //  Logger.i("当前大于35分贝：$calculateVolume")
                     onLineDbCount = 0
                     if (!isMicOnline) {
                         isMicOnline = true
-                        MyApp.socketEventViewModel.uploadState("2", "故障已解除")
+                     //   MyApp.socketEventViewModel.uploadState("2", "故障已解除")
                     }
                 }
             }
@@ -712,16 +714,16 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                 Logger.e("触发唤醒关键字：${curKeyword},关键字得分：${rtl?.ncm_keyword}，门限值：${rtl?.ncmThresh}，置信度：$credibility，是否启用：${keywordBean?.enabled},speechMsg:$speechMsg，speechTimes:$speechMsgTimes,当前分贝：$volume")
                 //withContext(Dispatchers.Main) {
                 if (System.currentTimeMillis() - lastUploadTime < 5 * 1000) {
+                    Logger.i("呼叫太频繁")
                     return@launch
                 }
                 if (rtl!!.ncm_keyword < 1200) {
-                    delay(800)
+                    delay(500)
                     executeRecognizer()
                     // 二次检验
                 } else {
                     uploadAlarm(curKeyword)
                 }
-
                 //    }
             }
         }.onFailure {
@@ -862,7 +864,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
     private var byteArrayQueue = ByteArrayQueue()
     private var keyArrayQueue = ByteArrayQueue()
 
-    private var keyMaxSize = AudioRecorder.SAMPLE_RATE_IN_HZ * AudioRecorder.AUDIO_FORMAT * 5
+    private var keyMaxSize = AudioRecorder.SAMPLE_RATE_IN_HZ * AudioRecorder.AUDIO_FORMAT * 3
 
     // 30秒音频所占的格式
     private var maxQueueSize = AudioRecorder.SAMPLE_RATE_IN_HZ * AudioRecorder.AUDIO_FORMAT * 30
