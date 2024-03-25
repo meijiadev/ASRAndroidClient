@@ -620,7 +620,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
             }
             writeByteToQueue(data)
             calculateVolume = data.calculateVolume()
-            Logger.d("当前分贝：$calculateVolume")
+           // Logger.d("当前分贝：$calculateVolume")
             //从刚刚开始录音500ms以后开始判断是否拾音器故障
             if (System.currentTimeMillis() - startRecordTime < 1500) {
                 return
@@ -718,7 +718,7 @@ class MainActivity : AppCompatActivity(), HandlerAction, AbilityCallback,
                     return@launch
                 }
                 if (rtl!!.ncm_keyword < 1200) {
-                    delay(500)
+                    delay(200)
                     executeRecognizer()
                     // 二次检验
                 } else {

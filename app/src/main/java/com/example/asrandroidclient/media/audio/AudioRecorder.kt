@@ -59,7 +59,9 @@ class AudioRecorder private constructor() : Recorder {
 
         const val SAMPLE_RATE_IN_HZ = 16000
 
+        // const val AUDIO_SOURCE=MediaRecorder.AudioSource.VOICE_COMMUNICATION
         const val AUDIO_SOURCE = MediaRecorder.AudioSource.MIC
+
         //  const val AUDIO_SOURCE = AudioManager.STREAM_MUSIC
         const val CHANNEL_CONFIGURATION = AudioFormat.CHANNEL_IN_MONO
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT

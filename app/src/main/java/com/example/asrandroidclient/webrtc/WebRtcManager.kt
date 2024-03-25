@@ -1,8 +1,11 @@
 package com.example.asrandroidclient.webrtc
 
 import android.content.Context
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.media.MediaRecorder
 import com.example.asrandroidclient.MyApp
+import com.example.asrandroidclient.media.audio.AudioRecorder
 import com.orhanobut.logger.Logger
 import com.ys.rkapi.MyManager
 import org.webrtc.*
@@ -66,10 +69,19 @@ class WebRtcManager(context: Context) : SdpObserver {
         // -----------创建PeerConnectionFactory
         val adm =
             JavaAudioDeviceModule.builder(context)
-                .createAudioDeviceModule()  //音频配置当前JAVA实现，还有native
+                .setSampleRate(AudioRecorder.SAMPLE_RATE_IN_HZ)
+                .setAudioFormat(AudioRecorder.AUDIO_FORMAT)
+                .setAudioSource(MediaRecorder.AudioSource.MIC).createAudioDeviceModule()
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
+        for (dev in devices) {
+            if (dev.type == AudioDeviceInfo.TYPE_USB_DEVICE) {
+                adm.setPreferredInputDevice(dev)
+                Logger.i("设置音频源：${dev.type}")
+            }
+        }
         val encoderFactory: VideoEncoderFactory
         val decoderFactory: VideoDecoderFactory
-
         encoderFactory = DefaultVideoEncoderFactory(
             mRootEglBase?.getEglBaseContext(),
             true,
@@ -220,15 +232,20 @@ class WebRtcManager(context: Context) : SdpObserver {
 
     private fun createAudioConstraints(): MediaConstraints {
         val audioConstraints = MediaConstraints()
+        Logger.i("修改模块无法收音问题1")
+        //回声消除
         audioConstraints.mandatory.add(
             MediaConstraints.KeyValuePair(AUDIO_ECHO_CANCELLATION_CONSTRAINT, "true")
         )
+        // 自动增益
         audioConstraints.mandatory.add(
-            MediaConstraints.KeyValuePair(AUDIO_AUTO_GAIN_CONTROL_CONSTRAINT, "false")
+            MediaConstraints.KeyValuePair(AUDIO_AUTO_GAIN_CONTROL_CONSTRAINT, "true")
         )
+        //高音过滤
         audioConstraints.mandatory.add(
             MediaConstraints.KeyValuePair(AUDIO_HIGH_PASS_FILTER_CONSTRAINT, "true")
         )
+        //噪音处理
         audioConstraints.mandatory.add(
             MediaConstraints.KeyValuePair(AUDIO_NOISE_SUPPRESSION_CONSTRAINT, "true")
         )
